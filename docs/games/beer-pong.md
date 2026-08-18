@@ -48,15 +48,22 @@ turno y turno.
   ┌──────────────────────┐
   │  turno · marcador    │  HUD superior
   ├──────────────────────┤
-  │      ▲               │
-  │   vasos del rival    │  mesa en perspectiva (fuga hacia arriba)
-  │      ·               │
+  │   ▓▓▓▓ vasos ▓▓▓     │  formación compacta, al fondo de la mesa
+  │    ▓▓▓  ▓▓           │
+  │                      │
+  │   mesa libre         │  ~2/3 de la mesa: superficie de bote
   │                      │
   ├──────────────────────┤
   │   zona de swipe      │  ~40 % inferior, pulgar cómodo
   │   ● pelota           │
   └──────────────────────┘
   ```
+
+- **La formación va agrupada en el fondo**, ocupando sólo la franja superior
+  de la mesa (los vasos se tocan casi entre sí, como en un rack real). El
+  resto —unas dos terceras partes— queda despejado a propósito: es la
+  superficie sobre la que la pelota puede botar antes de llegar a los vasos,
+  y sin ella los tiros de bote no tienen sitio donde ocurrir.
 
 - La zona de swipe ocupa el tercio inferior porque es donde llega el pulgar con
   el móvil en una mano; la parte alta queda sólo para mirar.

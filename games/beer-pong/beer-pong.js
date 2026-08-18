@@ -32,6 +32,13 @@
   var SQUASH = 0.78; // achatamiento vertical de las elipses: da la perspectiva
   var CUP_HEIGHT_RATIO = 2.0; // alto del vaso respecto al radio de su boca
   var CUP_BASE_RATIO = 0.72; // radio de la base respecto al de la boca
+  var CUP_SPACING_RATIO = 2.04; // separación dentro de una fila, en radios de boca
+
+  // Franja de mesa que ocupa la formación (0 = fondo, 1 = borde cercano).
+  // Agrupada arriba a propósito: el resto de la mesa queda libre para que la
+  // pelota pueda botar en ella antes de llegar a los vasos.
+  var ROWS_T_FIRST = 0.13;
+  var ROWS_T_LAST = 0.33;
 
   // --- Arco del lanzamiento ------------------------------------------------
   // Altura de la cúspide, en fracción del lado corto. Con vasos que ahora
@@ -208,14 +215,23 @@
         return farHalfWidth + (nearHalfWidth - farHalfWidth) * t;
       },
       cupRadiusAt: function (t) {
-        return basis * (0.028 + (0.058 - 0.028) * t);
+        // Los vasos viven ahora en el fondo, donde la perspectiva los
+        // empequeñece: se parte de un radio mayor y se atenúa cuánto
+        // encoge con la distancia, para que sigan siendo apuntables.
+        return basis * (0.04 + 0.022 * t);
       }
     };
   }
 
+  /**
+   * Posición de cada fila a lo largo de la mesa (0 = fondo, 1 = borde
+   * cercano). La formación se agrupa en el fondo y deja libre el resto de
+   * la mesa: es la superficie sobre la que la pelota puede botar antes de
+   * llegar a los vasos.
+   */
   function rowT(rowIndex, rowCount) {
-    var first = 0.16;
-    var last = 0.86;
+    var first = ROWS_T_FIRST;
+    var last = ROWS_T_LAST;
     if (rowCount <= 1) return last;
     return first + ((last - first) * rowIndex) / (rowCount - 1);
   }
@@ -235,7 +251,7 @@
       var r = geo.cupRadiusAt(t);
       var rowCups = byRow[row];
       var n = rowCups.length;
-      var spacing = r * 2.15;
+      var spacing = r * CUP_SPACING_RATIO;
       var rowWidth = spacing * (n - 1);
       var startX = width / 2 - rowWidth / 2;
 
@@ -479,11 +495,13 @@
     var depth = geo.bottomY - geo.topY;
     var power = clamp((speed - MIN_SWIPE_SPEED) / (MAX_SWIPE_SPEED - MIN_SWIPE_SPEED), 0, 1);
 
-    // El rango va de "corto, se queda antes del vértice" (potencia 0) a
-    // "sobrepasa la fila de atrás" (potencia 1): con la bola de descanso a
-    // ballRest.y, hace falta más de 1×depth para alcanzar el fondo de la
-    // mesa (topY), así que el multiplicador máximo no puede quedarse en 1.
-    var rangeY = depth * (0.33 + 1.07 * power);
+    // El rango va de "cae en mesa abierta, bastante antes del vértice"
+    // (potencia 0) a "sobrepasa la fila del fondo" (potencia 1). Con la
+    // formación agrupada al fondo, todos los vasos quedan en una franja
+    // estrecha de distancias: si el mínimo fuese mucho más corto, la banda
+    // útil de potencia se comprimiría contra el máximo y el tiro sería
+    // imposible de dosificar.
+    var rangeY = depth * (0.54 + 0.79 * power);
     var ratio = vx / -vy;
 
     // La altura del arco la fija ARC_APEX_*, no el alcance; el tiempo de
@@ -573,7 +591,11 @@
       // Un vaso ya acertado este turno sigue en la mesa hasta que el turno
       // se cierre: estorba como cualquier otro, pero no se puede volver a
       // encestar (la bola rebota en su boca como si estuviera tapada).
-      if (!pos.cup.pendingHit && dist <= pos.r - ballRadius * 0.6) {
+      // Radio de acierto algo mayor que la boca dibujada: el plan lo pide
+      // así a propósito, para perdonar la imprecisión del dedo en una
+      // pantalla pequeña. Exigir que la pelota entrase limpia (r menos su
+      // propio radio) dejaba una ventana de apenas medio grado de potencia.
+      if (!pos.cup.pendingHit && dist <= pos.r + ballRadius * 0.25) {
         ball.x = cx;
         ball.y = cy;
         ball.z = pos.h;
@@ -798,7 +820,9 @@
     ballRadius = Math.min(width, height) * 0.026;
     gravity = Math.min(width, height) * 3.2;
     var geo = tableGeometry();
-    ballRest = { x: width / 2, y: geo.bottomY + (height - geo.bottomY) * 0.42 };
+    // Saque pegado al borde cercano de la mesa: con los vasos al fondo, cada
+    // píxel que la pelota no tiene que recorrer desde abajo es alcance útil.
+    ballRest = { x: width / 2, y: geo.bottomY + (height - geo.bottomY) * 0.22 };
     if (ball.phase !== 'flight' && ball.phase !== 'sinking') resetBall();
   }
 

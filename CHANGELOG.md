@@ -3,6 +3,41 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [2.2] — Beer Pong: formación compacta al fondo, más mesa para botar
+
+### Cambiado
+- Los vasos se agrupan (separación de 2.04 radios, casi tocándose, como en un
+  rack real) y se llevan al fondo de la mesa: ocupan la franja `t` 0.13–0.33
+  en vez de 0.16–0.86. La mesa libre por delante del vértice pasa de 62 px a
+  294 px en un móvil de 390×844 — casi cinco veces más superficie sobre la
+  que botar.
+- Vasos algo más grandes en origen (`0.040 + 0.022·t` frente a
+  `0.028 + 0.030·t`): al irse al fondo, la perspectiva los encogía hasta
+  hacerlos difíciles de apuntar.
+- Saque más cerca del borde de la mesa (0.22 en vez de 0.42 de la zona de
+  swipe): con los vasos al fondo, cada píxel que la pelota no recorre desde
+  abajo es alcance útil.
+- Alcance recalibrado a `depth · (0.54 + 0.79·potencia)`. Con la formación
+  agrupada, todos los vasos caen en una franja estrecha de distancias; el
+  mínimo anterior dejaba la banda útil comprimida contra el máximo (el
+  vértice pedía ya un 80 % de potencia y la fila del fondo no se alcanzaba).
+  Ahora el vértice sale sobre el 54 % y la fila del fondo sobre el 83 %.
+
+### Arreglado
+- **Ventana de acierto demasiado estrecha.** Al pasar a colisión física, la
+  condición de entrada exigía que la pelota entrase limpia (`r` menos su
+  propio radio), la mitad de tolerancia que la de v1.7 y contraria a lo que
+  pide el plan del juego («radio de acierto algo mayor que el vaso dibujado,
+  para perdonar la imprecisión del dedo en pantalla pequeña»). Restaurada a
+  `r + 0.25·radio de la pelota`.
+
+Validado en Chromium headless: un tiro flojo da ahora 3 botes en la mesa
+libre con picos 90 → 22 → 5 (la decadencia exacta de una restitución de 0.5),
+frente a los 2 de antes; el barrido de potencias encesta en el vértice
+(~2900 px/s) y en las filas del fondo (~3650-3900 px/s), con las intermedias
+en medio. Repasadas turnos, marcador (10 → 9 al cerrar turno), hub, mute y
+offline.
+
 ## [2.1] — Beer Pong: vasos con volumen y física de rebote
 
 ### Cambiado
