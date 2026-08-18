@@ -189,11 +189,12 @@ body {
   font-size: var(--fs-sm);
 }
 
+/* Etiqueta sobre el título, en flujo: en pantallas estrechas un badge
+   absoluto tapaba los nombres largos, y uno lateral estrujaba el texto. */
 .game-card__badge {
-  position: absolute;
-  top: var(--sp-3);
-  inset-inline-end: var(--sp-3);
-  padding: 0.15rem var(--sp-2);
+  display: inline-block;
+  margin-bottom: var(--sp-1);
+  padding: 0.1rem var(--sp-2);
   border-radius: var(--radius-pill);
   background: var(--c-surface-2);
   color: var(--c-text-muted);

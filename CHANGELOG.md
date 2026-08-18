@@ -3,6 +3,13 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [0.5] — Fase 0
+
+### Arreglado
+- El badge «Próximamente» tapaba los nombres de juego largos en pantallas
+  estrechas. Pasa a ser una etiqueta en flujo sobre el título, dentro del
+  cuerpo de la tarjeta.
+
 ## [0.4] — Fase 0
 
 ### Añadido

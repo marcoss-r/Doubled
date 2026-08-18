@@ -18,7 +18,8 @@ Formato `MAJOR.MINOR`, sin patch.
 | Fase 0 · iconos PWA | 0.2 |
 | Fase 0 · convenciones y changelog | 0.3 |
 | Fase 0 · planes de desarrollo de los 4 juegos | 0.4 |
-| Fase 1 · hitos de Air Hockey | 0.5, 0.6… |
+| Fase 0 · arreglo de layout del hub | 0.5 |
+| Fase 1 · hitos de Air Hockey | 0.6, 0.7… |
 | Fase 1 · Air Hockey completo | **1.0** |
 | Fase 2 · Beer Pong completo | **2.0** |
 | Fase 3 · Pong completo | **3.0** |
@@ -29,7 +30,7 @@ Formato `MAJOR.MINOR`, sin patch.
 `APP_VERSION` vive en **`js/shared/version.js`** y en ningún otro sitio.
 
 ```js
-var APP_VERSION = '0.4';
+var APP_VERSION = '0.5';
 var CACHE_NAME = 'doubled-v' + APP_VERSION;
 ```
 
