@@ -1,8 +1,8 @@
 /**
  * Air Hockey — Doubled.
- * Fase 1, hito 0.7: física base. Un disco rebota en las bandas y en un
- * único mallet, que sigue el puntero por toda la mesa (todavía sin dividir
- * en mitades: eso llega en el hito 0.8 con la entrada multitáctil real).
+ * Fase 1, hito 0.8: entrada multitáctil real. Dos malletes, uno por
+ * jugador, cada uno limitado a su mitad de la mesa mediante
+ * DoubledInput.createHalfPointerTracker.
  */
 (function () {
   'use strict';
@@ -30,10 +30,36 @@
   var orientationBlocked = false;
 
   var puck = { x: 0, y: 0, vx: 0, vy: 0 };
-  var mallet = { x: 0, y: 0, prevX: 0, prevY: 0, vx: 0, vy: 0, target: null };
+
+  // Jugador A abajo, jugador B arriba (B se lee al revés, ver hito 0.9).
+  var mallets = {
+    A: { x: 0, y: 0, prevX: 0, prevY: 0, vx: 0, vy: 0, active: false },
+    B: { x: 0, y: 0, prevX: 0, prevY: 0, vx: 0, vy: 0, active: false }
+  };
+  var pointerTargets = { A: null, B: null };
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
+  }
+
+  function resetMallet(id) {
+    var m = mallets[id];
+    m.x = width / 2;
+    m.y = id === 'A' ? height * 0.82 : height * 0.18;
+    m.prevX = m.x;
+    m.prevY = m.y;
+    m.vx = 0;
+    m.vy = 0;
+  }
+
+  function clampMallet(id) {
+    var m = mallets[id];
+    m.x = clamp(m.x, malletRadius, width - malletRadius);
+    if (id === 'A') {
+      m.y = clamp(m.y, height / 2 + malletRadius, height - malletRadius);
+    } else {
+      m.y = clamp(m.y, malletRadius, height / 2 - malletRadius);
+    }
   }
 
   function resize() {
@@ -59,17 +85,18 @@
       var sy = height / oldHeight;
       puck.x *= sx;
       puck.y *= sy;
-      mallet.x *= sx;
-      mallet.y *= sy;
-      mallet.prevX = mallet.x;
-      mallet.prevY = mallet.y;
+      ['A', 'B'].forEach(function (id) {
+        mallets[id].x *= sx;
+        mallets[id].y *= sy;
+        mallets[id].prevX = mallets[id].x;
+        mallets[id].prevY = mallets[id].y;
+        clampMallet(id);
+      });
     } else {
       puck.x = width / 2;
-      puck.y = height * 0.3;
-      mallet.x = width / 2;
-      mallet.y = height * 0.75;
-      mallet.prevX = mallet.x;
-      mallet.prevY = mallet.y;
+      puck.y = height / 2;
+      resetMallet('A');
+      resetMallet('B');
     }
   }
 
@@ -78,14 +105,8 @@
   function update(dt) {
     if (orientationBlocked) return;
 
-    mallet.prevX = mallet.x;
-    mallet.prevY = mallet.y;
-    if (mallet.target) {
-      mallet.x = clamp(mallet.target.x, malletRadius, width - malletRadius);
-      mallet.y = clamp(mallet.target.y, malletRadius, height - malletRadius);
-    }
-    mallet.vx = (mallet.x - mallet.prevX) / dt;
-    mallet.vy = (mallet.y - mallet.prevY) / dt;
+    updateMalletVelocity('A', dt);
+    updateMalletVelocity('B', dt);
 
     puck.x += puck.vx * dt;
     puck.y += puck.vy * dt;
@@ -100,7 +121,22 @@
     }
 
     handleWalls();
-    handleMalletCollision();
+    handleMalletCollision('A');
+    handleMalletCollision('B');
+  }
+
+  function updateMalletVelocity(id, dt) {
+    var m = mallets[id];
+    var target = pointerTargets[id];
+    m.prevX = m.x;
+    m.prevY = m.y;
+    if (target) {
+      m.x = target.x;
+      m.y = target.y;
+      clampMallet(id);
+    }
+    m.vx = (m.x - m.prevX) / dt;
+    m.vy = (m.y - m.prevY) / dt;
   }
 
   function handleWalls() {
@@ -112,6 +148,8 @@
       puck.vx = -puck.vx * RESTITUTION_WALL;
     }
 
+    // Las porterías (goles) llegan en el hito 0.9; de momento arriba y abajo
+    // también rebotan, como una banda más.
     if (puck.y < puckRadius) {
       puck.y = puckRadius;
       puck.vy = -puck.vy * RESTITUTION_WALL;
@@ -121,20 +159,21 @@
     }
   }
 
-  function handleMalletCollision() {
-    var dx = puck.x - mallet.x;
-    var dy = puck.y - mallet.y;
+  function handleMalletCollision(id) {
+    var m = mallets[id];
+    var dx = puck.x - m.x;
+    var dy = puck.y - m.y;
     var dist = Math.sqrt(dx * dx + dy * dy) || 0.0001;
     var minDist = puckRadius + malletRadius;
     if (dist >= minDist) return;
 
     var nx = dx / dist;
     var ny = dy / dist;
-    puck.x = mallet.x + nx * minDist;
-    puck.y = mallet.y + ny * minDist;
+    puck.x = m.x + nx * minDist;
+    puck.y = m.y + ny * minDist;
 
-    var relVx = puck.vx - mallet.vx;
-    var relVy = puck.vy - mallet.vy;
+    var relVx = puck.vx - m.vx;
+    var relVy = puck.vy - m.vy;
     var velAlongNormal = relVx * nx + relVy * ny;
 
     if (velAlongNormal < 0) {
@@ -142,8 +181,8 @@
       puck.vx += j * nx;
       puck.vy += j * ny;
     }
-    puck.vx += mallet.vx * 0.35;
-    puck.vy += mallet.vy * 0.35;
+    puck.vx += m.vx * 0.35;
+    puck.vy += m.vy * 0.35;
   }
 
   /* -------------------------------------------------------------- render */
@@ -176,13 +215,8 @@
     ctx.lineTo(width / 2 + goalHalfWidth, height - 2);
     ctx.stroke();
 
-    ctx.beginPath();
-    ctx.arc(mallet.x, mallet.y, malletRadius, 0, Math.PI * 2);
-    ctx.fillStyle = 'rgba(34, 229, 255, 0.85)';
-    ctx.fill();
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
-    ctx.stroke();
+    drawMallet('B', 'rgba(255, 62, 165, 0.85)');
+    drawMallet('A', 'rgba(34, 229, 255, 0.85)');
 
     ctx.beginPath();
     ctx.arc(puck.x, puck.y, puckRadius, 0, Math.PI * 2);
@@ -190,26 +224,38 @@
     ctx.fill();
   }
 
-  /* --------------------------------------------------------------- input */
-
-  function pointFromEvent(event) {
-    var rect = canvas.getBoundingClientRect();
-    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  function drawMallet(id, color) {
+    var m = mallets[id];
+    ctx.beginPath();
+    ctx.arc(m.x, m.y, malletRadius, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.globalAlpha = m.active ? 1 : 0.55;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
+    ctx.stroke();
   }
 
-  canvas.addEventListener('pointerdown', function (event) {
-    canvas.setPointerCapture(event.pointerId);
-    mallet.target = pointFromEvent(event);
-  });
-  canvas.addEventListener('pointermove', function (event) {
-    if (!mallet.target) return;
-    mallet.target = pointFromEvent(event);
-  });
-  canvas.addEventListener('pointerup', function () {
-    mallet.target = null;
-  });
-  canvas.addEventListener('pointercancel', function () {
-    mallet.target = null;
+  /* --------------------------------------------------------------- input */
+
+  DoubledInput.createHalfPointerTracker(canvas, {
+    onDown: function (half, nx, ny) {
+      var id = half === 'top' ? 'B' : 'A';
+      pointerTargets[id] = { x: nx * width, y: ny * height };
+      mallets[id].active = true;
+    },
+    onMove: function (half, nx, ny) {
+      var id = half === 'top' ? 'B' : 'A';
+      if (!pointerTargets[id]) return;
+      pointerTargets[id].x = nx * width;
+      pointerTargets[id].y = ny * height;
+    },
+    onUp: function (half) {
+      var id = half === 'top' ? 'B' : 'A';
+      pointerTargets[id] = null;
+      mallets[id].active = false;
+    }
   });
 
   /* -------------------------------------------------------- orientación */

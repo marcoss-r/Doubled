@@ -37,7 +37,8 @@ var ASSET_BLOCKS = {
     './games/air-hockey/index.html',
     './games/air-hockey/air-hockey.css',
     './games/air-hockey/air-hockey.js',
-    './js/shared/loop.js'
+    './js/shared/loop.js',
+    './js/shared/input.js'
   ]
   // 'beer-pong':  [...]                          ← Fase 2
   // 'pong':       [...]                          ← Fase 3

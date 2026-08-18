@@ -3,6 +3,16 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [0.8] — Fase 1
+
+### Añadido
+- `js/shared/input.js`: asignación de hasta dos punteros simultáneos por
+  mitad de pantalla (`top`/`bottom`), reutilizable por cualquier juego con
+  dos jugadores encarados.
+- Segundo mallet en Air Hockey: cada jugador controla el suyo, limitado a su
+  mitad de la mesa; el mallet no cruza la línea central aunque el dedo sí lo
+  haga. Validado con dos toques simultáneos en Chromium headless.
+
 ## [0.7] — Fase 1
 
 ### Añadido
