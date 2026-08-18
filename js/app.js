@@ -13,7 +13,7 @@
    */
   var GAMES = [
     { slug: 'air-hockey', path: './games/air-hockey/', ready: true },
-    { slug: 'beer-pong', path: './games/beer-pong/', ready: false },
+    { slug: 'beer-pong', path: './games/beer-pong/', ready: true },
     { slug: 'pong', path: './games/pong/', ready: false },
     { slug: 'battleship', path: './games/battleship/', ready: false }
   ];

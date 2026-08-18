@@ -1,8 +1,7 @@
 /**
  * Beer Pong — Doubled.
- * Fase 2, hito 1.9: redención, muerte súbita, gameover y revancha.
- * El pulido final, el sonido/vibración y el alta en el hub llegan en el
- * hito 2.0.
+ * Fase 2, hito 2.0: sonido, vibración, pulido y alta en el hub. Cierra la
+ * Fase 2.
  */
 (function () {
   'use strict';
@@ -16,6 +15,7 @@
   var overlayTitle = document.getElementById('overlay-title');
   var overlaySubtitle = document.getElementById('overlay-subtitle');
   var rematchBtn = document.getElementById('rematch-btn');
+  var muteBtn = document.getElementById('mute-btn');
   var handover = DoubledHandover.create();
 
   var MAX_DPR = 3;
@@ -91,6 +91,14 @@
 
   function opponentOf(id) {
     return id === 'A' ? 'B' : 'A';
+  }
+
+  /** Callback de handover.show(): desbloquea el audio en cada toque de
+   * "Estoy listo" (gesto de usuario, requisito de iOS Safari) y habilita
+   * la entrada táctil del turno. */
+  function onTurnReady() {
+    DoubledAudio.unlock();
+    turnPhase = 'playing';
   }
 
   function targetPlayer() {
@@ -285,6 +293,8 @@
       // Whiteout normal: el objetivo recibe un tiro de redención en su
       // próximo turno, que le toca de todas formas por la alternancia.
       redemptionActive = true;
+      DoubledAudio.beep(320, 0.22, 'triangle');
+      DoubledAudio.vibrate([15, 40, 15]);
     }
 
     currentPlayer = opponentOf(currentPlayer);
@@ -297,9 +307,7 @@
     var subtitle = redemptionActive ? '¡Tiro de redención! Toca cuando estés listo' : undefined;
     handover.show(
       'Pasa el móvil a ' + players[currentPlayer].name,
-      function () {
-        turnPhase = 'playing';
-      },
+      onTurnReady,
       subtitle
     );
     refreshHud();
@@ -312,6 +320,11 @@
       players[id].rowCount = rowSizesFor(3).length;
       players[id].cupsRemaining = 3;
     });
+    DoubledAudio.beep(300, 0.16, 'sawtooth');
+    setTimeout(function () {
+      DoubledAudio.beep(300, 0.16, 'sawtooth');
+    }, 180);
+    DoubledAudio.vibrate([20, 60, 20, 60, 20]);
 
     currentPlayer = opponentOf(currentPlayer);
     shotsThisTurn = 0;
@@ -322,9 +335,7 @@
 
     handover.show(
       'Pasa el móvil a ' + players[currentPlayer].name,
-      function () {
-        turnPhase = 'playing';
-      },
+      onTurnReady,
       '¡Muerte súbita! 3 vasos por bando'
     );
     refreshHud();
@@ -336,6 +347,17 @@
     overlaySubtitle.textContent = players[loserId].name + ' se quedó sin vasos';
     overlay.hidden = false;
     turnPhase = 'gameover';
+
+    // Pequeño arpegio ascendente: tres beeps encadenados con setTimeout, ya
+    // que DoubledAudio.beep() no admite retraso propio.
+    DoubledAudio.beep(440, 0.16, 'triangle');
+    setTimeout(function () {
+      DoubledAudio.beep(554, 0.16, 'triangle');
+    }, 130);
+    setTimeout(function () {
+      DoubledAudio.beep(659, 0.28, 'triangle');
+    }, 260);
+    DoubledAudio.vibrate([30, 50, 30, 50, 80]);
   }
 
   function resetGame() {
@@ -353,9 +375,7 @@
     overlay.hidden = true;
     turnPhase = 'handover';
 
-    handover.show('Pasa el móvil a ' + players[currentPlayer].name, function () {
-      turnPhase = 'playing';
-    });
+    handover.show('Pasa el móvil a ' + players[currentPlayer].name, onTurnReady);
     refreshHud();
   }
 
@@ -415,6 +435,8 @@
       ball.y = hit.y;
       ball.phase = 'sunk';
       ball.landedAt = performance.now();
+      DoubledAudio.beep(560, 0.14, 'sine');
+      DoubledAudio.vibrate(18);
       return;
     }
 
@@ -428,6 +450,7 @@
       ball.flightVZ = ball.flightVZ * 0.22;
       ball.flightDuration = 0.22;
       ball.flightElapsed = 0;
+      DoubledAudio.beep(160, 0.12, 'triangle');
       return;
     }
 
@@ -706,6 +729,19 @@
     resize();
   });
 
+  /* ---------------------------------------------------------------- mute */
+
+  function refreshMuteButton() {
+    var isMuted = DoubledAudio.isMuted();
+    muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    muteBtn.setAttribute('aria-label', isMuted ? 'Activar sonido' : 'Silenciar');
+  }
+
+  muteBtn.addEventListener('click', function () {
+    DoubledAudio.setMuted(!DoubledAudio.isMuted());
+    refreshMuteButton();
+  });
+
   /* ------------------------------------------------------------------ init */
 
   checkOrientation();
@@ -713,9 +749,8 @@
   DoubledRegisterSW('../../service-worker.js');
 
   refreshHud();
-  handover.show('Pasa el móvil a ' + players[currentPlayer].name, function () {
-    turnPhase = 'playing';
-  });
+  refreshMuteButton();
+  handover.show('Pasa el móvil a ' + players[currentPlayer].name, onTurnReady);
 
   var loop = DoubledLoop.createFixedLoop({ step: STEP, update: update, render: render });
   loop.start();

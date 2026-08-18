@@ -3,6 +3,29 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [2.0] — Beer Pong completo (cierra Fase 2)
+
+### Añadido
+- Tarjeta de Beer Pong activa en el hub.
+- Sonido y vibración en los momentos clave, reutilizando `js/shared/audio.js`
+  de Air Hockey: acierto (tono agudo), fallo/bote (tono grave), whiteout con
+  tiro de redención concedido, arranque de muerte súbita, y un pequeño
+  arpegio ascendente al terminar la partida.
+- Botón de silenciar en el HUD, con el mismo mute global compartido con
+  Air Hockey (`doubled:muted` en `localStorage`).
+- Audio desbloqueado en cada toque de «Estoy listo» del traspaso
+  (`onTurnReady`), requisito de iOS Safari, centralizado en un único sitio
+  en vez de repetido en las cuatro llamadas a `handover.show()`.
+
+Validado en Chromium headless: tarjeta activa y navegación hub↔juego;
+mute persistido y un lanzamiento con sonido desactivado sin errores; aviso
+de orientación en horizontal; y offline entrando directo al juego sin
+pasar antes por el hub (27 assets cacheados, sirve la página correcta,
+no cae al fallback del hub).
+
+Pendiente, no automatizable desde el repo: pruebas en iPhone y Android
+reales (`docs/CONVENTIONS.md` §8).
+
 ## [1.9] — Beer Pong: redención, muerte súbita, gameover y revancha
 
 ### Añadido
