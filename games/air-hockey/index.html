@@ -30,6 +30,21 @@
 
       <div class="ah-hud">
         <a class="ah-hud__btn" href="../../index.html" aria-label="Volver al hub">✕</a>
+        <div class="ah-hud__right">
+          <button class="ah-hud__btn" id="mute-btn" type="button" aria-label="Silenciar">🔊</button>
+          <button class="ah-hud__btn" id="pause-btn" type="button" aria-label="Pausa">⏸</button>
+        </div>
+      </div>
+
+      <div class="ah-overlay" id="overlay" hidden>
+        <div class="ah-overlay__content">
+          <p class="ah-overlay__title" id="overlay-title"></p>
+          <p class="ah-overlay__subtitle" id="overlay-subtitle"></p>
+          <div class="ah-overlay__actions" id="overlay-actions" hidden>
+            <button class="ah-overlay__btn" id="rematch-btn" type="button">Revancha</button>
+            <a class="ah-overlay__btn ah-overlay__btn--ghost" href="../../index.html">Volver al hub</a>
+          </div>
+        </div>
       </div>
 
       <div class="ah-rotate-warning" id="rotate-warning" hidden>
@@ -38,6 +53,8 @@
     </div>
 
     <script src="../../js/shared/version.js"></script>
+    <script src="../../js/shared/storage.js"></script>
+    <script src="../../js/shared/audio.js"></script>
     <script src="../../js/shared/loop.js"></script>
     <script src="../../js/shared/input.js"></script>
     <script src="./air-hockey.js"></script>

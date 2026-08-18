@@ -1,8 +1,8 @@
 /**
  * Air Hockey — Doubled.
- * Fase 1, hito 0.9: goles, marcador rotado, saques con cuenta atrás y
- * recolocación del disco si se queda parado. Pausa, gameover, revancha,
- * sonido y vibración llegan en el hito 0.10.
+ * Fase 1, hito 0.10: pausa, fin de partida, revancha, sonido y vibración.
+ * El pulido final y la validación en dispositivos reales llegan en el
+ * hito 1.0, que además activa la tarjeta del juego en el hub.
  */
 (function () {
   'use strict';
@@ -11,6 +11,13 @@
   var canvas = document.getElementById('table');
   var ctx = canvas.getContext('2d');
   var rotateWarning = document.getElementById('rotate-warning');
+  var overlay = document.getElementById('overlay');
+  var overlayTitle = document.getElementById('overlay-title');
+  var overlaySubtitle = document.getElementById('overlay-subtitle');
+  var overlayActions = document.getElementById('overlay-actions');
+  var rematchBtn = document.getElementById('rematch-btn');
+  var pauseBtn = document.getElementById('pause-btn');
+  var muteBtn = document.getElementById('mute-btn');
 
   var MAX_DPR = 3;
   var STEP = 1 / 120;
@@ -19,6 +26,7 @@
   var SERVE_COUNTDOWN = 2;
   var STALL_LIMIT = 5;
   var STALL_SPEED_FACTOR = 0.02;
+  var WIN_SCORE = 7;
 
   var accent =
     getComputedStyle(document.documentElement).getPropertyValue('--c-air-hockey').trim() ||
@@ -42,10 +50,10 @@
   };
   var pointerTargets = { A: null, B: null };
 
-  // 'countdown' | 'playing'. El resto de fases (ready/paused/gameover)
-  // llegan en el hito 0.10.
-  var phase = 'countdown';
+  // 'ready' | 'countdown' | 'playing' | 'paused' | 'gameover'
+  var phase = 'ready';
   var score = { A: 0, B: 0 };
+  var winner = null;
   var serveTo = Math.random() < 0.5 ? 'A' : 'B';
   var countdown = SERVE_COUNTDOWN;
   var stallTimer = 0;
@@ -132,6 +140,8 @@
       return;
     }
 
+    if (phase !== 'playing') return;
+
     puck.x += puck.vx * dt;
     puck.y += puck.vy * dt;
     puck.vx *= FRICTION;
@@ -177,14 +187,14 @@
 
     if (puck.y < puckRadius) {
       if (inGoalRange) {
-        if (puck.y < -puckRadius) scoreGoal('A'); // salió por la portería de B
+        if (puck.y < -puckRadius) scoreGoal('A');
         return;
       }
       puck.y = puckRadius;
       puck.vy = -puck.vy * RESTITUTION_WALL;
     } else if (puck.y > height - puckRadius) {
       if (inGoalRange) {
-        if (puck.y > height + puckRadius) scoreGoal('B'); // salió por la de A
+        if (puck.y > height + puckRadius) scoreGoal('B');
         return;
       }
       puck.y = height - puckRadius;
@@ -218,6 +228,8 @@
     puck.vy += m.vy * 0.35;
 
     stallTimer = 0;
+    DoubledAudio.beep(320, 0.06, 'square');
+    DoubledAudio.vibrate(10);
   }
 
   function handleStall(dt, speed) {
@@ -238,20 +250,37 @@
 
   function scoreGoal(scoringPlayer) {
     score[scoringPlayer]++;
-    var concededBy = scoringPlayer === 'A' ? 'B' : 'A';
-    serveTo = concededBy;
+    DoubledAudio.beep(180, 0.35, 'sawtooth');
+    DoubledAudio.vibrate([20, 40, 20, 40]);
+
+    if (score[scoringPlayer] >= WIN_SCORE) {
+      winner = scoringPlayer;
+      phase = 'gameover';
+      centerPuck();
+      resetMallet('A');
+      resetMallet('B');
+      showGameOverOverlay();
+      return;
+    }
+
+    startCountdown(scoringPlayer === 'A' ? 'B' : 'A');
+  }
+
+  function startCountdown(target) {
+    serveTo = target;
     phase = 'countdown';
     countdown = SERVE_COUNTDOWN;
     stallTimer = 0;
     centerPuck();
     resetMallet('A');
     resetMallet('B');
+    hideOverlay();
   }
 
   function launchPuck() {
     var baseSpeed = Math.min(width, height) * 0.5;
-    var angle = Math.random() * 0.6 - 0.3; // ±0.3 rad respecto a la vertical
-    var dir = serveTo === 'A' ? 1 : -1; // hacia abajo (A) o hacia arriba (B)
+    var angle = Math.random() * 0.6 - 0.3;
+    var dir = serveTo === 'A' ? 1 : -1;
     puck.vx = Math.sin(angle) * baseSpeed;
     puck.vy = Math.cos(angle) * baseSpeed * dir;
     phase = 'playing';
@@ -321,10 +350,8 @@
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Jugador A (abajo), lectura normal.
     ctx.fillText(String(score.A), width / 2, height / 2 + offset);
 
-    // Jugador B (arriba), rotado 180° para que se lea desde su lado.
     ctx.save();
     ctx.translate(width / 2, height / 2 - offset);
     ctx.rotate(Math.PI);
@@ -340,6 +367,86 @@
     ctx.textBaseline = 'middle';
     ctx.fillText(String(value), width / 2, height / 2);
   }
+
+  /* ------------------------------------------------------------- overlay */
+
+  function showOverlay(title, subtitle, withActions, onClick) {
+    overlayTitle.textContent = title;
+    overlaySubtitle.textContent = subtitle || '';
+    overlayActions.hidden = !withActions;
+    overlay.hidden = false;
+    overlay.onclick = onClick || null;
+  }
+
+  function hideOverlay() {
+    overlay.hidden = true;
+    overlay.onclick = null;
+  }
+
+  function showReadyOverlay() {
+    showOverlay('Air Hockey', 'Toca para jugar · a ' + WIN_SCORE + ' goles', false, function () {
+      DoubledAudio.unlock();
+      startCountdown(serveTo);
+    });
+  }
+
+  function showGameOverOverlay() {
+    var winnerName = winner === 'A' ? 'Jugador A' : 'Jugador B';
+    showOverlay(winnerName + ' gana', score.A + ' - ' + score.B, true, null);
+  }
+
+  function showPausedOverlay() {
+    showOverlay('Pausa', 'Toca para reanudar', false, function () {
+      resumeFromPause();
+    });
+  }
+
+  /* --------------------------------------------------------------- pausa */
+
+  function togglePause() {
+    if (phase === 'playing' || phase === 'countdown') {
+      phase = 'paused';
+      showPausedOverlay();
+    } else if (phase === 'paused') {
+      resumeFromPause();
+    }
+  }
+
+  function resumeFromPause() {
+    startCountdown(serveTo);
+  }
+
+  pauseBtn.addEventListener('click', function (event) {
+    event.stopPropagation();
+    togglePause();
+  });
+
+  document.addEventListener('visibilitychange', function () {
+    if (document.hidden && (phase === 'playing' || phase === 'countdown')) togglePause();
+  });
+
+  rematchBtn.addEventListener('click', function (event) {
+    event.stopPropagation();
+    var loser = winner === 'A' ? 'B' : 'A';
+    score.A = 0;
+    score.B = 0;
+    winner = null;
+    startCountdown(loser);
+  });
+
+  /* ---------------------------------------------------------------- mute */
+
+  function refreshMuteButton() {
+    var isMuted = DoubledAudio.isMuted();
+    muteBtn.textContent = isMuted ? '🔇' : '🔊';
+    muteBtn.setAttribute('aria-label', isMuted ? 'Activar sonido' : 'Silenciar');
+  }
+
+  muteBtn.addEventListener('click', function (event) {
+    event.stopPropagation();
+    DoubledAudio.setMuted(!DoubledAudio.isMuted());
+    refreshMuteButton();
+  });
 
   /* --------------------------------------------------------------- input */
 
@@ -382,6 +489,8 @@
 
   checkOrientation();
   resize();
+  refreshMuteButton();
+  showReadyOverlay();
 
   var loop = DoubledLoop.createFixedLoop({ step: STEP, update: update, render: render });
   loop.start();

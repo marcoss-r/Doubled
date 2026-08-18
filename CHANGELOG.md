@@ -3,6 +3,22 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [0.10] — Fase 1
+
+### Añadido
+- `js/shared/storage.js`: helpers de `localStorage` con degradación
+  silenciosa si no está disponible (modo privado de Safari, etc.).
+- `js/shared/audio.js`: sonidos sintetizados con Web Audio (sin ficheros),
+  vibración y mute persistido, con desbloqueo de audio en el primer toque.
+- Pantalla `READY` («Toca para jugar») que desbloquea el audio y arranca la
+  primera cuenta atrás.
+- Pausa manual (botón) y automática (`visibilitychange`); siempre se
+  reanuda con una nueva cuenta atrás, nunca en caliente.
+- Fin de partida a 7 goles, con marcador ganador y opciones de «Revancha»
+  (reinicia el marcador) o «Volver al hub».
+- Botón de silenciar/activar sonido, con el icono reflejando el estado.
+- Sonido y vibración al golpear el disco y al marcar gol.
+
 ## [0.9] — Fase 1
 
 ### Añadido
