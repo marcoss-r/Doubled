@@ -3,6 +3,27 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [1.6] — Beer Pong: swipe con previsualización y parábola
+
+### Añadido
+- Gesto de swipe: `pointerdown` en la zona de saque → arrastrar → `pointerup`.
+  Recorrido menor de 24 px se ignora (toque accidental); gesto hacia abajo o
+  a más de 65° de la vertical se cancela sin gastar tiro.
+- Potencia calculada a partir de la velocidad del gesto en los últimos 80 ms
+  (no del recorrido total), reutilizada tanto en la previsualización en vivo
+  como en el lanzamiento real al soltar.
+- Previsualización mientras se arrastra: guía punteada (naranja si el gesto
+  es válido, gris si no) y un anillo de potencia alrededor de la bola.
+- Física de la parábola: proyectil 2.5D con `(x, y)` sobre el plano de la
+  mesa y una altura `z` con gravedad; el alcance y la deriva lateral salen
+  de la potencia y el ángulo del gesto. Reutiliza `js/shared/loop.js` de
+  Air Hockey para el paso de tiempo fijo.
+- Bola con sombra elíptica que se encoge con la altura, para vender la
+  ilusión de profundidad.
+
+Sin detección de acierto contra los vasos todavía: tras aterrizar, la bola
+hace una pausa y vuelve a la posición de saque. Llega en el hito 1.7.
+
 ## [1.5] — Beer Pong: shell del juego
 
 ### Añadido

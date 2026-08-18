@@ -45,7 +45,8 @@ var ASSET_BLOCKS = {
   'beer-pong': [
     './games/beer-pong/index.html',
     './games/beer-pong/beer-pong.css',
-    './games/beer-pong/beer-pong.js'
+    './games/beer-pong/beer-pong.js',
+    './js/shared/loop.js'
   ]
   // 'pong':       [...]                          ← Fase 3
   // 'battleship': [...]                          ← Fase 4
