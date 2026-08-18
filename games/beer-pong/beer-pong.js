@@ -28,6 +28,26 @@
   var SAMPLE_WINDOW_MS = 80;
   var LANDED_PAUSE_MS = 700;
 
+  // --- Vasos con volumen (tronco de cono en perspectiva falsa) -------------
+  var SQUASH = 0.78; // achatamiento vertical de las elipses: da la perspectiva
+  var CUP_HEIGHT_RATIO = 2.0; // alto del vaso respecto al radio de su boca
+  var CUP_BASE_RATIO = 0.72; // radio de la base respecto al de la boca
+
+  // --- Arco del lanzamiento ------------------------------------------------
+  // Altura de la cúspide, en fracción del lado corto. Con vasos que ahora
+  // tienen volumen, el arco no puede salir de la propia distancia del tiro:
+  // los tiros cortos quedaban tan rasos que se estrellaban contra la pared
+  // del vaso más cercano en vez de sobrevolarlo. Se fija alto (unas 2-3
+  // veces la altura del vaso más grande) y sólo sube un poco con la potencia.
+  var ARC_APEX_BASE = 0.22;
+  var ARC_APEX_POWER = 0.1;
+
+  // --- Rebotes -------------------------------------------------------------
+  var RESTITUTION_TABLE = 0.5; // energía conservada al botar en la mesa
+  var RESTITUTION_CUP = 0.62; // ... y al chocar con el borde o la pared
+  var TABLE_FRICTION = 0.82; // pérdida horizontal en cada bote
+  var MAX_BOUNCES = 4; // tras esto la bola se amortigua y se detiene
+
   var accent =
     getComputedStyle(document.documentElement).getPropertyValue('--c-beer-pong').trim() ||
     '#ffa227';
@@ -35,10 +55,36 @@
   var width = 0;
   var height = 0;
   var ballRadius = 0;
+  var gravity = 0;
   var orientationBlocked = false;
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
+  }
+
+  /** Componentes del acento, para poder modular su alfa en los degradados. */
+  function parseHex(hex) {
+    var match = /^#?([0-9a-f]{6})$/i.exec(String(hex).trim());
+    if (!match) return { r: 255, g: 162, b: 39 };
+    var value = parseInt(match[1], 16);
+    return { r: (value >> 16) & 255, g: (value >> 8) & 255, b: value & 255 };
+  }
+
+  var accentRGB = parseHex(accent);
+
+  function accentAlpha(alpha) {
+    return 'rgba(' + accentRGB.r + ', ' + accentRGB.g + ', ' + accentRGB.b + ', ' + alpha + ')';
+  }
+
+  /**
+   * Distancia en el plano de la mesa. Las elipses de los vasos están
+   * achatadas por la perspectiva, así que una separación vertical en
+   * pantalla equivale a `dy / SQUASH` sobre la mesa: con esta métrica un
+   * vaso vuelve a ser un círculo de radio `r` y las colisiones se pueden
+   * resolver como tales.
+   */
+  function tableDistance(dx, dy) {
+    return Math.hypot(dx, dy / SQUASH);
   }
 
   /* --------------------------------------------------------- formación */
@@ -70,7 +116,6 @@
   }
 
   var REGROUP_SIZES = [10, 6, 3, 1];
-  var CUP_ACCEPT_RATIO = 1.15; // radio de acierto: +15% sobre el vaso dibujado
   var CUP_REMOVE_ANIM_MS = 260;
   var TURN_SHOTS = 2;
 
@@ -128,7 +173,7 @@
    * Retira los vasos marcados como acertados durante el turno que acaba de
    * terminar. Se hace de golpe al cerrar el turno (no tiro a tiro): así el
    * jugador ve durante todo su turno cuáles ya ha tocado (atenuados en
-   * drawCups) sin que la formación cambie a mitad de turno.
+   * drawScene) sin que la formación cambie a mitad de turno.
    */
   function retirePendingHits(player) {
     var now = performance.now();
@@ -140,21 +185,6 @@
       player.cupsRemaining--;
     });
     maybeRegroup(player);
-  }
-
-  function findHitCup(x, y, geo, player) {
-    var positions = cupPositions(player.cups, player.rowCount, geo);
-    var best = null;
-    var bestDist = Infinity;
-    positions.forEach(function (pos) {
-      if (!pos.cup.alive || pos.cup.pendingHit) return;
-      var dist = Math.hypot(pos.x - x, pos.y - y);
-      if (dist <= pos.r * CUP_ACCEPT_RATIO && dist < bestDist) {
-        bestDist = dist;
-        best = pos;
-      }
-    });
-    return best;
   }
 
   /* -------------------------------------------------------------- layout */
@@ -210,23 +240,78 @@
       var startX = width / 2 - rowWidth / 2;
 
       rowCups.forEach(function (cup) {
-        positions.push({ cup: cup, x: startX + cup.col * spacing, y: y, r: r });
+        positions.push({
+          cup: cup,
+          x: startX + cup.col * spacing, // centro del vaso, a ras de mesa
+          y: y,
+          r: r, // radio de la boca
+          baseR: r * CUP_BASE_RATIO, // radio de la base (el vaso se estrecha)
+          h: r * CUP_HEIGHT_RATIO // altura, en las mismas unidades que ball.z
+        });
       });
     });
     return positions;
   }
 
+  /**
+   * Posiciones del rival, cacheadas: la física las consulta en cada paso
+   * (120/s) y recalcularlas allocaría un array de objetos por paso.
+   *
+   * La clave del caché es la identidad del array `cups` más las dimensiones:
+   * al reagrupar (`buildFormation` devuelve un array nuevo), al cambiar de
+   * turno (se pasa al array del otro jugador) o al redimensionar, el caché
+   * se invalida solo. Los flags `alive`/`pendingHit` se leen en vivo desde
+   * `pos.cup`, que apunta al mismo objeto, así que no hace falta invalidarlo
+   * al acertar un vaso.
+   */
+  var cupCache = { cups: null, w: 0, h: 0, positions: null };
+
+  function targetCupPositions() {
+    var player = targetPlayer();
+    if (cupCache.cups === player.cups && cupCache.w === width && cupCache.h === height) {
+      return cupCache.positions;
+    }
+    cupCache.positions = cupPositions(player.cups, player.rowCount, tableGeometry());
+    cupCache.cups = player.cups;
+    cupCache.w = width;
+    cupCache.h = height;
+    return cupCache.positions;
+  }
+
   /* ------------------------------------------------------------ la bola */
 
   var ballRest = { x: 0, y: 0 };
-  var ball = { x: 0, y: 0, z: 0, phase: 'idle' };
+
+  /**
+   * La bola es un proyectil 2.5D: `(x, y)` es su posición sobre el plano de
+   * la mesa y `z` su altura; en pantalla se dibuja en `(x, y - z)`. Las
+   * velocidades se integran de verdad (no hay trayectoria guionizada), que
+   * es lo que permite que rebote contra la mesa, el borde de un vaso o su
+   * pared exterior y siga volando.
+   */
+  var ball = {
+    x: 0,
+    y: 0,
+    z: 0,
+    vx: 0,
+    vy: 0,
+    vz: 0,
+    phase: 'idle', // 'idle' | 'flight' | 'sinking' | 'sunk' | 'settled'
+    bounces: 0,
+    sinkCup: null,
+    wasHit: false
+  };
 
   function resetBall() {
     ball.phase = 'idle';
     ball.x = ballRest.x;
     ball.y = ballRest.y;
     ball.z = 0;
-    ball.bounced = false;
+    ball.vx = 0;
+    ball.vy = 0;
+    ball.vz = 0;
+    ball.bounces = 0;
+    ball.sinkCup = null;
     ball.wasHit = false;
   }
 
@@ -400,62 +485,212 @@
     // mesa (topY), así que el multiplicador máximo no puede quedarse en 1.
     var rangeY = depth * (0.33 + 1.07 * power);
     var ratio = vx / -vy;
-    var landingX = ball.x + rangeY * ratio;
-    var landingY = ball.y - rangeY;
 
-    var duration = 0.5 + 0.45 * power;
-    var gravity = Math.min(width, height) * 3.2;
+    // La altura del arco la fija ARC_APEX_*, no el alcance; el tiempo de
+    // vuelo sale de ella y la velocidad horizontal se ajusta para recorrer
+    // `rangeY` en ese tiempo. Así la relación gesto→alcance se mantiene,
+    // pero la bola siempre cae sobre los vasos desde arriba.
+    var apex = Math.min(width, height) * (ARC_APEX_BASE + ARC_APEX_POWER * power);
+    var launchVZ = Math.sqrt(2 * gravity * apex);
+    var duration = (2 * launchVZ) / gravity;
 
     ball.phase = 'flight';
-    ball.bounced = false;
-    ball.startX = ball.x;
-    ball.startY = ball.y;
-    ball.flightVX = (landingX - ball.x) / duration;
-    ball.flightVY = (landingY - ball.y) / duration;
-    ball.flightVZ = 0.5 * gravity * duration;
-    ball.gravity = gravity;
-    ball.flightDuration = duration;
-    ball.flightElapsed = 0;
+    ball.bounces = 0;
+    ball.sinkCup = null;
+    ball.wasHit = false;
+    ball.vx = (rangeY * ratio) / duration;
+    ball.vy = -rangeY / duration;
+    ball.vz = launchVZ;
+  }
+
+  /* ------------------------------------------------------------- colisiones */
+
+  /**
+   * Refleja la velocidad horizontal contra la normal radial de un vaso.
+   * El cálculo se hace en coordenadas de mesa (la `y` de pantalla dividida
+   * por SQUASH) y se convierte de vuelta al final: reflejar directamente en
+   * pantalla desviaría la bola en un ángulo equivocado, porque las elipses
+   * están achatadas.
+   */
+  function reflectOffCup(dx, dy, restitution) {
+    var nx = dx;
+    var ny = dy / SQUASH;
+    var len = Math.hypot(nx, ny) || 1e-4;
+    nx /= len;
+    ny /= len;
+
+    var wvx = ball.vx;
+    var wvy = ball.vy / SQUASH;
+    var dot = wvx * nx + wvy * ny;
+    if (dot >= 0) return false; // ya se aleja del vaso: no rebota otra vez
+
+    wvx -= (1 + restitution) * dot * nx;
+    wvy -= (1 + restitution) * dot * ny;
+    ball.vx = wvx;
+    ball.vy = wvy * SQUASH;
+    return true;
+  }
+
+  function sinkBall(pos) {
+    pos.cup.pendingHit = true;
+    ball.wasHit = true;
+    ball.sinkCup = pos;
+    ball.phase = 'sinking';
+    // Dentro del vaso ya no rebota: cae al fondo perdiendo lateral.
+    ball.vx *= 0.15;
+    ball.vy *= 0.15;
+    ball.vz = -Math.abs(ball.vz) * 0.35;
+    DoubledAudio.beep(560, 0.14, 'sine');
+    DoubledAudio.vibrate(18);
+  }
+
+  function settleBall() {
+    ball.phase = 'settled';
+    ball.z = 0;
+    ball.landedAt = performance.now();
   }
 
   /**
-   * Al terminar un vuelo: si hay un vaso vivo dentro del radio de acierto,
-   * se retira (con animación) y se comprueba la reagrupación. Si falla, da
-   * un pequeño bote amortiguado antes de asentarse (un único bote, no una
-   * simulación completa: es cosmético, el resultado ya está decidido).
+   * Cruce del plano de la boca de los vasos, comprobado entre la posición
+   * anterior y la actual: si la bola baja atravesando ese plano, o entra
+   * (queda dentro de la boca) o golpea el borde. Sin este test de cruce la
+   * bola podría atravesar la boca en un solo paso a velocidades altas.
    */
-  function handleLanding() {
-    var geo = tableGeometry();
-    var hit = findHitCup(ball.x, ball.y, geo, targetPlayer());
+  function checkCupMouth(prevX, prevY, prevZ) {
+    var positions = targetCupPositions();
 
-    if (hit) {
-      hit.cup.pendingHit = true;
-      ball.wasHit = true;
-      ball.x = hit.x;
-      ball.y = hit.y;
+    for (var i = 0; i < positions.length; i++) {
+      var pos = positions[i];
+      if (!pos.cup.alive) continue;
+      if (!(prevZ > pos.h && ball.z <= pos.h)) continue;
+
+      // Posición interpolada en el instante exacto del cruce.
+      var f = (prevZ - pos.h) / (prevZ - ball.z || 1e-4);
+      var cx = prevX + (ball.x - prevX) * f;
+      var cy = prevY + (ball.y - prevY) * f;
+      var dist = tableDistance(cx - pos.x, cy - pos.y);
+
+      // Un vaso ya acertado este turno sigue en la mesa hasta que el turno
+      // se cierre: estorba como cualquier otro, pero no se puede volver a
+      // encestar (la bola rebota en su boca como si estuviera tapada).
+      if (!pos.cup.pendingHit && dist <= pos.r - ballRadius * 0.6) {
+        ball.x = cx;
+        ball.y = cy;
+        ball.z = pos.h;
+        sinkBall(pos);
+        return true;
+      }
+
+      if (dist <= pos.r + ballRadius) {
+        // Golpe en el borde: sale despedida hacia fuera y hacia arriba.
+        ball.x = cx;
+        ball.y = cy;
+        ball.z = pos.h;
+        reflectOffCup(cx - pos.x, cy - pos.y, RESTITUTION_CUP);
+        ball.vz = Math.abs(ball.vz) * RESTITUTION_CUP;
+        ball.bounces++;
+        DoubledAudio.beep(420, 0.07, 'square');
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /** Choque contra la pared exterior del vaso (el tronco de cono). */
+  function collideWithCupWalls() {
+    var positions = targetCupPositions();
+
+    for (var i = 0; i < positions.length; i++) {
+      var pos = positions[i];
+      if (!pos.cup.alive) continue; // ya retirado: deja de estar en la mesa
+      if (ball.z >= pos.h || ball.z < 0) continue;
+
+      var dx = ball.x - pos.x;
+      var dy = ball.y - pos.y;
+      var dist = tableDistance(dx, dy);
+      // El vaso se estrecha hacia abajo: su radio depende de la altura.
+      var radiusHere = pos.baseR + (pos.r - pos.baseR) * (ball.z / pos.h);
+      var minDist = radiusHere + ballRadius;
+      if (dist >= minDist) continue;
+
+      if (reflectOffCup(dx, dy, RESTITUTION_CUP)) {
+        ball.bounces++;
+        DoubledAudio.beep(300, 0.06, 'square');
+      }
+      // Se saca del vaso aunque no rebotase, para no quedar encajada.
+      var scale = minDist / (dist || 1e-4);
+      ball.x = pos.x + dx * scale;
+      ball.y = pos.y + dy * scale;
+    }
+  }
+
+  function bounceOnTable() {
+    ball.z = 0;
+
+    var impact = Math.abs(ball.vz);
+    if (impact < gravity * 0.06 || ball.bounces >= MAX_BOUNCES) {
+      ball.vz = 0;
+      ball.vx *= 0.5;
+      ball.vy *= 0.5;
+      return;
+    }
+
+    ball.vz = impact * RESTITUTION_TABLE;
+    ball.vx *= TABLE_FRICTION;
+    ball.vy *= TABLE_FRICTION;
+    ball.bounces++;
+    // Cada bote suena un poco más agudo y más flojo que el anterior.
+    DoubledAudio.beep(150 + ball.bounces * 25, 0.09, 'triangle');
+  }
+
+  function ballHasStopped(geo) {
+    var basis = Math.min(width, height);
+    var wentFar = ball.y < geo.topY - ballRadius * 3;
+    var wentSide = ball.x < -ballRadius * 3 || ball.x > width + ballRadius * 3;
+    // Volver por delante sólo cuenta si ya ha botado en algo: la bola sale
+    // de la zona de swipe, que está por debajo del borde cercano de la mesa,
+    // así que sin esta condición todo lanzamiento se daría por terminado en
+    // su primer paso de simulación.
+    var cameBack = ball.bounces > 0 && ball.y > geo.bottomY + ballRadius * 8;
+    var atRest = ball.z <= 0.5 && ball.vz <= 0 && Math.hypot(ball.vx, ball.vy) < basis * 0.05;
+    return wentFar || wentSide || cameBack || atRest;
+  }
+
+  /** Un paso de simulación de la bola en vuelo. */
+  function stepBall(dt) {
+    var prevX = ball.x;
+    var prevY = ball.y;
+    var prevZ = ball.z;
+
+    ball.vz -= gravity * dt;
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+    ball.z += ball.vz * dt;
+
+    if (ball.vz < 0 && checkCupMouth(prevX, prevY, prevZ)) return;
+
+    collideWithCupWalls();
+
+    if (ball.z <= 0) bounceOnTable();
+
+    if (ballHasStopped(tableGeometry())) settleBall();
+  }
+
+  /** La bola ya está dentro de un vaso: cae al fondo y se queda. */
+  function stepSinkingBall(dt) {
+    var pos = ball.sinkCup;
+
+    ball.vz -= gravity * dt;
+    ball.z += ball.vz * dt;
+    // Se centra suavemente en el vaso mientras baja.
+    ball.x += (pos.x - ball.x) * Math.min(1, dt * 10);
+    ball.y += (pos.y - ball.y) * Math.min(1, dt * 10);
+
+    if (ball.z <= 0) {
+      ball.z = 0;
       ball.phase = 'sunk';
       ball.landedAt = performance.now();
-      DoubledAudio.beep(560, 0.14, 'sine');
-      DoubledAudio.vibrate(18);
-      return;
     }
-
-    if (!ball.bounced) {
-      ball.bounced = true;
-      ball.phase = 'flight';
-      ball.startX = ball.x;
-      ball.startY = ball.y;
-      ball.flightVX = 0;
-      ball.flightVY = 0;
-      ball.flightVZ = ball.flightVZ * 0.22;
-      ball.flightDuration = 0.22;
-      ball.flightElapsed = 0;
-      DoubledAudio.beep(160, 0.12, 'triangle');
-      return;
-    }
-
-    ball.phase = 'landed';
-    ball.landedAt = performance.now();
   }
 
   /* --------------------------------------------------------------- input */
@@ -539,14 +774,10 @@
     if (orientationBlocked) return;
 
     if (ball.phase === 'flight') {
-      ball.flightElapsed += dt;
-      var t = Math.min(ball.flightElapsed, ball.flightDuration);
-      ball.x = ball.startX + ball.flightVX * t;
-      ball.y = ball.startY + ball.flightVY * t;
-      ball.z = Math.max(0, ball.flightVZ * t - 0.5 * ball.gravity * t * t);
-
-      if (ball.flightElapsed >= ball.flightDuration) handleLanding();
-    } else if (ball.phase === 'landed' || ball.phase === 'sunk') {
+      stepBall(dt);
+    } else if (ball.phase === 'sinking') {
+      stepSinkingBall(dt);
+    } else if (ball.phase === 'settled' || ball.phase === 'sunk') {
       if (performance.now() - ball.landedAt > LANDED_PAUSE_MS) finishShot();
     }
   }
@@ -561,10 +792,14 @@
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    ballRadius = Math.min(width, height) * 0.035;
+    // La bola era demasiado grande frente a la boca del vaso (0.65 de su
+    // radio); en una mesa real la proporción ronda 0.42, y con los vasos ya
+    // en volumen esa desproporción hacía casi imposible colarla.
+    ballRadius = Math.min(width, height) * 0.026;
+    gravity = Math.min(width, height) * 3.2;
     var geo = tableGeometry();
     ballRest = { x: width / 2, y: geo.bottomY + (height - geo.bottomY) * 0.42 };
-    if (ball.phase !== 'flight') resetBall();
+    if (ball.phase !== 'flight' && ball.phase !== 'sinking') resetBall();
   }
 
   /* -------------------------------------------------------------- render */
@@ -599,50 +834,119 @@
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    drawCups(geo, targetPlayer());
+    drawScene();
     drawAimPreview();
-    drawBall();
   }
 
-  function drawCups(geo, player) {
-    var positions = cupPositions(player.cups, player.rowCount, geo);
+  /**
+   * Vasos y bola, dibujados de atrás hacia delante (algoritmo del pintor):
+   * un vaso cercano tapa a los de detrás, que es lo que vende el volumen.
+   * La bola se ordena por su posición en la mesa, salvo cuando está cayendo
+   * dentro de un vaso: entonces se dibuja justo antes que él, para que la
+   * pared cercana la oculte según entra.
+   */
+  function drawScene() {
+    var positions = targetCupPositions();
     var now = performance.now();
+    var items = [];
 
     positions.forEach(function (pos) {
-      if (pos.cup.alive && !pos.cup.pendingHit) {
-        drawCup(pos.x, pos.y, pos.r, 1);
-        return;
+      var alpha = 1;
+      var scale = 1;
+
+      if (!pos.cup.alive) {
+        // Animación de retirada: encoge y se desvanece durante
+        // CUP_REMOVE_ANIM_MS tras cerrar el turno.
+        if (!pos.cup.removedAt) return;
+        var elapsed = now - pos.cup.removedAt;
+        if (elapsed >= CUP_REMOVE_ANIM_MS) return;
+        var t = elapsed / CUP_REMOVE_ANIM_MS;
+        alpha = 1 - t;
+        scale = 1 - t;
+      } else if (pos.cup.pendingHit) {
+        // Ya tocado este turno, pendiente de retirarse al cerrarlo.
+        alpha = 0.4;
       }
-      // Ya tocado este turno, pendiente de retirarse al cerrarlo: se
-      // atenúa para que se vea cuáles ya se han acertado.
-      if (pos.cup.alive && pos.cup.pendingHit) {
-        drawCup(pos.x, pos.y, pos.r, 0.4);
-        return;
-      }
-      // Animación de retirada: encoge y se desvanece durante
-      // CUP_REMOVE_ANIM_MS tras cerrar el turno; luego deja de dibujarse.
-      if (!pos.cup.removedAt) return;
-      var elapsed = now - pos.cup.removedAt;
-      if (elapsed >= CUP_REMOVE_ANIM_MS) return;
-      var t = elapsed / CUP_REMOVE_ANIM_MS;
-      drawCup(pos.x, pos.y, pos.r * (1 - t), 1 - t);
+
+      items.push({ depth: pos.y, kind: 'cup', pos: pos, alpha: alpha, scale: scale });
+    });
+
+    items.push({
+      depth: ball.sinkCup ? ball.sinkCup.y - 0.5 : ball.y,
+      kind: 'ball'
+    });
+
+    items.sort(function (a, b) {
+      return a.depth - b.depth;
+    });
+
+    items.forEach(function (item) {
+      if (item.kind === 'cup') drawCup(item.pos, item.alpha, item.scale);
+      else drawBall();
     });
   }
 
-  function drawCup(x, y, r, alpha) {
-    var gradient = ctx.createRadialGradient(x, y - r * 0.2, r * 0.2, x, y, r);
-    gradient.addColorStop(0, 'rgba(255, 216, 168, 0.95)');
-    gradient.addColorStop(1, accent);
+  /**
+   * Vaso con volumen: tronco de cono (más ancho en la boca que en la base),
+   * cuerpo oscuro translúcido y boca perfilada en neón — el borde por el que
+   * rebota la bola es exactamente el que se ve encendido.
+   */
+  function drawCup(pos, alpha, scale) {
+    var x = pos.x;
+    var y = pos.y;
+    var r = pos.r * scale;
+    var baseR = pos.baseR * scale;
+    var h = pos.h * scale;
+    var rimY = y - h;
+    var rimRY = r * SQUASH;
+    var baseRY = baseR * SQUASH;
 
     ctx.save();
     ctx.globalAlpha = alpha;
+
+    // Sombra en la mesa, para asentar el vaso.
     ctx.beginPath();
-    ctx.ellipse(x, y, r, r * 0.78, 0, 0, Math.PI * 2);
-    ctx.fillStyle = gradient;
+    ctx.ellipse(x, y, baseR * 1.15, baseRY * 1.15, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.fill();
-    ctx.lineWidth = Math.max(1, r * 0.08);
-    ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
+
+    // Cuerpo: base (frente de la elipse inferior) → laterales → labio trasero.
+    ctx.beginPath();
+    ctx.moveTo(x + r, rimY);
+    ctx.lineTo(x + baseR, y);
+    ctx.ellipse(x, y, baseR, baseRY, 0, 0, Math.PI, false);
+    ctx.lineTo(x - r, rimY);
+    ctx.ellipse(x, rimY, r, rimRY, 0, Math.PI, Math.PI * 2, false);
+    ctx.closePath();
+
+    var body = ctx.createLinearGradient(0, rimY, 0, y);
+    body.addColorStop(0, accentAlpha(0.3));
+    body.addColorStop(0.45, accentAlpha(0.13));
+    body.addColorStop(1, 'rgba(12, 15, 26, 0.92)');
+    ctx.fillStyle = body;
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = accentAlpha(0.35);
     ctx.stroke();
+
+    // Interior de la boca: hueco oscuro, más claro al fondo para dar cavidad.
+    ctx.beginPath();
+    ctx.ellipse(x, rimY, r * 0.88, rimRY * 0.88, 0, 0, Math.PI * 2);
+    var mouth = ctx.createLinearGradient(0, rimY - rimRY, 0, rimY + rimRY);
+    mouth.addColorStop(0, accentAlpha(0.22));
+    mouth.addColorStop(1, 'rgba(5, 7, 14, 0.95)');
+    ctx.fillStyle = mouth;
+    ctx.fill();
+
+    // Borde neón: la superficie de rebote.
+    ctx.beginPath();
+    ctx.ellipse(x, rimY, r, rimRY, 0, 0, Math.PI * 2);
+    ctx.lineWidth = Math.max(1.5, r * 0.11);
+    ctx.strokeStyle = accent;
+    ctx.shadowColor = accent;
+    ctx.shadowBlur = r * 0.7;
+    ctx.stroke();
+
     ctx.restore();
   }
 
@@ -680,18 +984,21 @@
     var basis = Math.min(width, height);
     var shadowScale = 1 - Math.min(ball.z / (basis * 0.5), 0.6);
 
-    ctx.beginPath();
-    ctx.ellipse(
-      ball.x,
-      ball.y,
-      ballRadius * 0.9 * shadowScale,
-      ballRadius * 0.4 * shadowScale,
-      0,
-      0,
-      Math.PI * 2
-    );
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
-    ctx.fill();
+    // Dentro de un vaso no hay sombra que proyectar sobre la mesa.
+    if (!ball.sinkCup) {
+      ctx.beginPath();
+      ctx.ellipse(
+        ball.x,
+        ball.y,
+        ballRadius * 0.9 * shadowScale,
+        ballRadius * 0.4 * shadowScale,
+        0,
+        0,
+        Math.PI * 2
+      );
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.fill();
+    }
 
     var screenY = ball.y - ball.z;
     ctx.beginPath();

@@ -60,9 +60,15 @@ turno y turno.
 
 - La zona de swipe ocupa el tercio inferior porque es donde llega el pulgar con
   el móvil en una mano; la parte alta queda sólo para mirar.
-- Perspectiva **falsa**: la mesa es un trapecio y los vasos son elipses cuyo
-  tamaño decrece con la distancia. No hay 3D real; se interpola entre un plano
-  cercano y uno lejano.
+- Perspectiva **falsa**: la mesa es un trapecio y los vasos se dibujan con el
+  tamaño decreciendo con la distancia. No hay 3D real; se interpola entre un
+  plano cercano y uno lejano.
+- **Vasos con volumen:** cada vaso es un tronco de cono (boca más ancha que la
+  base), con el cuerpo oscuro translúcido, el interior de la boca en hueco y el
+  borde perfilado en neón. Ese borde encendido es literalmente la superficie
+  contra la que rebota la pelota, así que lo que se ve y lo que colisiona
+  coinciden. Se dibujan de atrás hacia delante (algoritmo del pintor) para que
+  los cercanos tapen a los lejanos.
 - Render en `<canvas>` (mesa, vasos, pelota, sombra) con HUD en DOM encima.
 
 ---
@@ -88,15 +94,36 @@ turno y turno.
 
 ## 5. Mecánica de lanzamiento
 
-- La pelota se simula como un **proyectil 2.5D**: posición `(x, y)` sobre el
-  plano de la mesa más una altura `z` con gravedad constante.
-- El punto de caída se obtiene resolviendo `z = 0`; el acierto se decide por
-  distancia entre ese punto y el centro de cada vaso, con radio de acierto algo
-  **mayor que el vaso dibujado** (perdonar un poco compensa la imprecisión del
-  dedo en pantalla pequeña).
-- Rebote: si la pelota cae en la mesa fuera de vaso, hace un par de botes
-  amortiguados y sale; si golpea el borde de un vaso, se desvía. Ambos son
-  cosméticos, el resultado ya está decidido en el impacto.
+- La pelota es un **proyectil 2.5D**: posición `(x, y)` sobre el plano de la
+  mesa más una altura `z` con gravedad constante; en pantalla se dibuja en
+  `(x, y - z)`.
+- **Física integrada de verdad, no trayectoria guionizada.** Se integran
+  velocidades paso a paso (`dt` fijo de 1/120 s, vía `js/shared/loop.js`), de
+  modo que el resultado de un tiro no está decidido al soltar el dedo: la
+  pelota puede botar en la mesa y colarse después, o rebotar en un borde y
+  acabar fuera.
+- Colisiones, en este orden por paso:
+  1. **Boca del vaso.** Se comprueba el *cruce* del plano de la boca entre la
+     posición anterior y la actual, no el solape final: a velocidades altas la
+     pelota podría atravesar la boca entera en un solo paso. Si cruza bajando
+     y queda dentro, entra; si queda en la corona del borde, rebota.
+  2. **Pared del vaso.** El vaso se estrecha hacia abajo, así que su radio de
+     colisión depende de la altura a la que le llegue la pelota.
+  3. **Mesa**, con restitución y rozamiento; cada bote suena un poco más agudo
+     y más flojo que el anterior.
+- Las reflexiones se calculan en **coordenadas de mesa** (la `y` de pantalla
+  dividida por el achatamiento de la perspectiva) y se convierten de vuelta al
+  final: reflejar directamente en pantalla desviaría la pelota en un ángulo
+  equivocado, porque los vasos se dibujan como elipses, no como círculos.
+- **Altura del arco desacoplada del alcance.** El gesto controla la distancia,
+  pero la cúspide se fija alta (unas 2-3 veces la altura del vaso más grande) y
+  sólo sube ligeramente con la potencia. Acoplarlas dejaba los tiros cortos tan
+  rasos que se estrellaban contra la pared del vaso más cercano en vez de
+  sobrevolarlo, haciendo imposible encestar en las filas de delante.
+- Un vaso ya acertado sigue siendo un **obstáculo sólido** hasta que el turno se
+  cierra y se retira: se dibuja atenuado, estorba como cualquier otro y la
+  pelota rebota en su boca, pero no vuelve a puntuar. Todo lo que se ve en la
+  mesa colisiona.
 - **Sin viento ni efecto**: la única variable es el gesto, para que la habilidad
   sea reproducible.
 - Toda la geometría en coordenadas normalizadas, igual que en Air Hockey.

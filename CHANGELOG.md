@@ -3,6 +3,57 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [2.1] — Beer Pong: vasos con volumen y física de rebote
+
+### Cambiado
+- **Vasos en 3D.** Cada vaso pasa de ser una elipse plana a un tronco de cono
+  con boca más ancha que la base: cuerpo oscuro translúcido, interior de la
+  boca en hueco y borde perfilado en neón. Se dibujan de atrás hacia delante
+  para que los cercanos tapen a los lejanos. Mantiene la estética neón
+  minimalista del resto del juego (nada de texturas ni relleno sólido).
+- **Física de rebote real.** La trayectoria deja de estar guionizada: se
+  integran velocidades paso a paso, así que el resultado del tiro ya no está
+  decidido al soltar el dedo. La pelota rebota contra el borde de la boca
+  (el aro neón que se ve encendido), contra la pared exterior del vaso —cuyo
+  radio depende de la altura, porque el vaso se estrecha— y contra la mesa,
+  con restitución y rozamiento. Puede botar en la mesa y colarse después.
+- El cruce del plano de la boca se comprueba por interpolación entre la
+  posición anterior y la actual, no por solape final: a velocidades altas la
+  pelota atravesaría la boca entera en un solo paso.
+- Las reflexiones se resuelven en coordenadas de mesa (deshaciendo el
+  achatamiento de la perspectiva) y se convierten de vuelta; reflejar
+  directamente en pantalla desviaría la pelota en un ángulo equivocado.
+- Pelota más pequeña (de 0.035 a 0.026 del lado corto): con 0.65 del radio de
+  la boca era desproporcionada frente a la de una mesa real (~0.42) y, con los
+  vasos ya en volumen, colarla resultaba casi imposible.
+
+### Arreglado
+- **Arco demasiado plano.** Al dar altura a los vasos, los tiros cortos se
+  estrellaban contra la pared del vaso más cercano en vez de sobrevolarlo:
+  ninguna potencia entre ~1400 y ~2100 px/s llegaba a pasar de la primera
+  fila, y el vértice era inencestable. La altura del arco se desacopla del
+  alcance (cúspide fija en 2-3 veces la altura del vaso más alto, subiendo
+  sólo un poco con la potencia).
+- **Vasos fantasma.** Un vaso acertado pero aún no retirado (se dibuja
+  atenuado hasta cerrar el turno) quedaba excluido de las colisiones, así que
+  la pelota lo atravesaba: contradice de lleno que los vasos tengan volumen.
+  Ahora todo vaso dibujado es sólido; el ya acertado estorba igual pero no
+  vuelve a puntuar.
+- **Lanzamiento que no despegaba.** Introducido y detectado en esta misma
+  tanda: la condición de "la pelota se ha salido de la mesa" se cumplía en el
+  primer paso de simulación, porque la posición de saque está en la zona de
+  swipe, por debajo del borde cercano de la mesa.
+
+Validado en Chromium headless instrumentando el canvas para reconstruir la
+altura real de la pelota (diferencia entre su sombra en la mesa y su posición
+dibujada) frame a frame: los picos de rebote decrecen 38→9 y 48→11, el factor
+0.25 que predice una restitución de 0.5 en la velocidad vertical; los rebotes
+en el borde se distinguen de los de mesa por ocurrir a la altura del vaso
+(z≈42) y son direccionalmente correctos —labio cercano devuelve la pelota
+hacia el jugador, labio lejano la lanza hacia el fondo—; y un tiro calibrado
+encesta y puntúa (10 → 9 vasos al cerrar el turno). Repasadas además las
+pruebas de turnos, hub, mute y offline.
+
 ## [2.0] — Beer Pong completo (cierra Fase 2)
 
 ### Añadido
