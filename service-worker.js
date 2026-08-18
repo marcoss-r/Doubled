@@ -26,7 +26,12 @@ var ASSET_BLOCKS = {
     './css/base.css',
     './css/hub.css',
     './js/app.js',
-    './js/shared/version.js'
+    './js/shared/version.js',
+    './assets/icons/icon-192.png',
+    './assets/icons/icon-512.png',
+    './assets/icons/maskable-192.png',
+    './assets/icons/maskable-512.png',
+    './assets/icons/apple-touch-icon-180.png'
   ]
   // 'air-hockey': ['./games/air-hockey/', ...]  ← Fase 1
   // 'beer-pong':  [...]                          ← Fase 2
