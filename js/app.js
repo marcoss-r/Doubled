@@ -12,7 +12,7 @@
    * y hace la tarjeta pulsable).
    */
   var GAMES = [
-    { slug: 'air-hockey', path: './games/air-hockey/', ready: false },
+    { slug: 'air-hockey', path: './games/air-hockey/', ready: true },
     { slug: 'beer-pong', path: './games/beer-pong/', ready: false },
     { slug: 'pong', path: './games/pong/', ready: false },
     { slug: 'battleship', path: './games/battleship/', ready: false }
@@ -73,24 +73,12 @@
     }
   }
 
-  /* -------------------------------------------------- service worker */
-
-  function registerServiceWorker() {
-    if (!('serviceWorker' in navigator)) return;
-
-    // Ruta relativa: el sitio vive en un subpath (/Doubled/) en Project Pages.
-    navigator.serviceWorker.register('./service-worker.js').catch(function (error) {
-      // Un fallo del SW no debe romper el hub (p. ej. abierto vía file://).
-      console.warn('[doubled] no se pudo registrar el service worker:', error);
-    });
-  }
-
   /* ------------------------------------------------------------------ init */
 
   renderVersion();
   renderGameCards();
   syncConnectionNotice();
-  registerServiceWorker();
+  DoubledRegisterSW('./service-worker.js');
 
   window.addEventListener('online', syncConnectionNotice);
   window.addEventListener('offline', syncConnectionNotice);

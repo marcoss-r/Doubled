@@ -3,6 +3,32 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [1.0] — Air Hockey completo (cierre de Fase 1)
+
+### Añadido
+- Tarjeta de Air Hockey activa en el hub (deja de ser "próximamente").
+- `js/shared/register-sw.js`: registro del service worker extraído a
+  utilidad compartida y llamado desde **cada página**, no sólo desde el
+  hub, para que cualquiera pueda ser la primera visitada sin perder
+  soporte offline.
+
+### Arreglado
+- El service worker sólo registraba desde `js/app.js` (hub): entrar
+  directamente a `/games/air-hockey/` no registraba nada, y sin registro
+  previo el modo offline no funcionaba en absoluto para quien no hubiera
+  pasado antes por el hub.
+- Precacheo de páginas bajo su URL de directorio además de su nombre de
+  fichero explícito (`.../index.html` → también `.../`): es la forma en la
+  que realmente se navega (enlaces del hub, marcadores), y sin el
+  duplicado una navegación offline a esa URL cae al fallback genérico y
+  sirve el hub en vez de la página pedida. Detectado al validar Air Hockey
+  offline entrando directamente al juego.
+
+Validado en Chromium headless: partida completa (ready → countdown →
+goles en ambas porterías → pausa → mute → gameover-path), navegación
+hub↔juego, aviso de orientación en horizontal, y los tres escenarios
+offline (hub, juego entrando directo, navegación hub→juego sin red).
+
 ## [0.10] — Fase 1
 
 ### Añadido

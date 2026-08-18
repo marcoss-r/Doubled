@@ -20,13 +20,13 @@ importScripts('./js/shared/version.js');
  */
 var ASSET_BLOCKS = {
   shell: [
-    './',
-    './index.html',
+    './index.html', // precache() lo duplica también bajo './'
     './manifest.webmanifest',
     './css/base.css',
     './css/hub.css',
     './js/app.js',
     './js/shared/version.js',
+    './js/shared/register-sw.js',
     './assets/icons/icon-192.png',
     './assets/icons/icon-512.png',
     './assets/icons/maskable-192.png',
@@ -56,13 +56,30 @@ function allAssets() {
 /**
  * Precachea uno a uno en vez de con `cache.addAll`, para que un único asset
  * caído (404, red inestable) no aborte la instalación completa.
+ *
+ * Un '.../index.html' se guarda también bajo su URL de directorio
+ * ('.../'): es la forma en la que de verdad se navega (enlaces del hub,
+ * `location.href` sin nombre de fichero, marcadores) y no coincide por sí
+ * sola con la entrada cacheada bajo el nombre de fichero explícito. Sin
+ * este duplicado, una navegación offline a esa URL cae al fallback genérico
+ * de `fetch` y sirve el hub en vez de la página pedida.
  */
 function precache(cache, urls) {
   return Promise.all(
     urls.map(function (url) {
-      return cache.add(new Request(url, { cache: 'reload' })).catch(function (error) {
-        console.warn('[doubled][sw] no se pudo precachear', url, error);
-      });
+      return fetch(new Request(url, { cache: 'reload' }))
+        .then(function (response) {
+          if (!response.ok) throw new Error('HTTP ' + response.status);
+
+          var puts = [cache.put(url, response.clone())];
+          if (url.slice(-11) === '/index.html') {
+            puts.push(cache.put(url.slice(0, -10), response));
+          }
+          return Promise.all(puts);
+        })
+        .catch(function (error) {
+          console.warn('[doubled][sw] no se pudo precachear', url, error);
+        });
     })
   );
 }

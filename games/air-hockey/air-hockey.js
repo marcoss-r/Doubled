@@ -491,6 +491,7 @@
   resize();
   refreshMuteButton();
   showReadyOverlay();
+  DoubledRegisterSW('../../service-worker.js');
 
   var loop = DoubledLoop.createFixedLoop({ step: STEP, update: update, render: render });
   loop.start();
