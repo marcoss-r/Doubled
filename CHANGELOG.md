@@ -3,6 +3,16 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [0.7] — Fase 1
+
+### Añadido
+- `js/shared/loop.js`: bucle de juego con paso de tiempo fijo (1/120 s) y
+  acumulador, reutilizable por cualquier juego en tiempo real.
+- Física base de Air Hockey: disco con fricción y velocidad máxima, rebote
+  en las cuatro bandas, colisión elástica disco-mallet con transferencia de
+  parte de la velocidad del mallet. Un único mallet, movido con el puntero
+  por toda la mesa (la división en mitades llega en el hito 0.8).
+
 ## [0.6] — Fase 1
 
 ### Añadido
