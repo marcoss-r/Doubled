@@ -1,8 +1,8 @@
 /**
  * Air Hockey — Doubled.
- * Fase 1, hito 0.8: entrada multitáctil real. Dos malletes, uno por
- * jugador, cada uno limitado a su mitad de la mesa mediante
- * DoubledInput.createHalfPointerTracker.
+ * Fase 1, hito 0.9: goles, marcador rotado, saques con cuenta atrás y
+ * recolocación del disco si se queda parado. Pausa, gameover, revancha,
+ * sonido y vibración llegan en el hito 0.10.
  */
 (function () {
   'use strict';
@@ -16,10 +16,16 @@
   var STEP = 1 / 120;
   var FRICTION = 0.995;
   var RESTITUTION_WALL = 0.92;
+  var SERVE_COUNTDOWN = 2;
+  var STALL_LIMIT = 5;
+  var STALL_SPEED_FACTOR = 0.02;
 
   var accent =
     getComputedStyle(document.documentElement).getPropertyValue('--c-air-hockey').trim() ||
     '#22e5ff';
+  var fontFamily =
+    getComputedStyle(document.documentElement).getPropertyValue('--font-display').trim() ||
+    'system-ui, sans-serif';
 
   var width = 0;
   var height = 0;
@@ -30,13 +36,19 @@
   var orientationBlocked = false;
 
   var puck = { x: 0, y: 0, vx: 0, vy: 0 };
-
-  // Jugador A abajo, jugador B arriba (B se lee al revés, ver hito 0.9).
   var mallets = {
     A: { x: 0, y: 0, prevX: 0, prevY: 0, vx: 0, vy: 0, active: false },
     B: { x: 0, y: 0, prevX: 0, prevY: 0, vx: 0, vy: 0, active: false }
   };
   var pointerTargets = { A: null, B: null };
+
+  // 'countdown' | 'playing'. El resto de fases (ready/paused/gameover)
+  // llegan en el hito 0.10.
+  var phase = 'countdown';
+  var score = { A: 0, B: 0 };
+  var serveTo = Math.random() < 0.5 ? 'A' : 'B';
+  var countdown = SERVE_COUNTDOWN;
+  var stallTimer = 0;
 
   function clamp(value, min, max) {
     return Math.max(min, Math.min(max, value));
@@ -60,6 +72,13 @@
     } else {
       m.y = clamp(m.y, malletRadius, height / 2 - malletRadius);
     }
+  }
+
+  function centerPuck() {
+    puck.x = width / 2;
+    puck.y = height / 2;
+    puck.vx = 0;
+    puck.vy = 0;
   }
 
   function resize() {
@@ -93,8 +112,7 @@
         clampMallet(id);
       });
     } else {
-      puck.x = width / 2;
-      puck.y = height / 2;
+      centerPuck();
       resetMallet('A');
       resetMallet('B');
     }
@@ -107,6 +125,12 @@
 
     updateMalletVelocity('A', dt);
     updateMalletVelocity('B', dt);
+
+    if (phase === 'countdown') {
+      countdown -= dt;
+      if (countdown <= 0) launchPuck();
+      return;
+    }
 
     puck.x += puck.vx * dt;
     puck.y += puck.vy * dt;
@@ -123,6 +147,7 @@
     handleWalls();
     handleMalletCollision('A');
     handleMalletCollision('B');
+    handleStall(dt, speed);
   }
 
   function updateMalletVelocity(id, dt) {
@@ -148,12 +173,20 @@
       puck.vx = -puck.vx * RESTITUTION_WALL;
     }
 
-    // Las porterías (goles) llegan en el hito 0.9; de momento arriba y abajo
-    // también rebotan, como una banda más.
+    var inGoalRange = Math.abs(puck.x - width / 2) < goalHalfWidth;
+
     if (puck.y < puckRadius) {
+      if (inGoalRange) {
+        if (puck.y < -puckRadius) scoreGoal('A'); // salió por la portería de B
+        return;
+      }
       puck.y = puckRadius;
       puck.vy = -puck.vy * RESTITUTION_WALL;
     } else if (puck.y > height - puckRadius) {
+      if (inGoalRange) {
+        if (puck.y > height + puckRadius) scoreGoal('B'); // salió por la de A
+        return;
+      }
       puck.y = height - puckRadius;
       puck.vy = -puck.vy * RESTITUTION_WALL;
     }
@@ -183,6 +216,45 @@
     }
     puck.vx += m.vx * 0.35;
     puck.vy += m.vy * 0.35;
+
+    stallTimer = 0;
+  }
+
+  function handleStall(dt, speed) {
+    if (speed < Math.min(width, height) * STALL_SPEED_FACTOR) {
+      stallTimer += dt;
+      if (stallTimer >= STALL_LIMIT) {
+        var half = puck.y < height / 2 ? 'B' : 'A';
+        puck.x = width / 2;
+        puck.y = half === 'A' ? height * 0.75 : height * 0.25;
+        puck.vx = 0;
+        puck.vy = 0;
+        stallTimer = 0;
+      }
+    } else {
+      stallTimer = 0;
+    }
+  }
+
+  function scoreGoal(scoringPlayer) {
+    score[scoringPlayer]++;
+    var concededBy = scoringPlayer === 'A' ? 'B' : 'A';
+    serveTo = concededBy;
+    phase = 'countdown';
+    countdown = SERVE_COUNTDOWN;
+    stallTimer = 0;
+    centerPuck();
+    resetMallet('A');
+    resetMallet('B');
+  }
+
+  function launchPuck() {
+    var baseSpeed = Math.min(width, height) * 0.5;
+    var angle = Math.random() * 0.6 - 0.3; // ±0.3 rad respecto a la vertical
+    var dir = serveTo === 'A' ? 1 : -1; // hacia abajo (A) o hacia arriba (B)
+    puck.vx = Math.sin(angle) * baseSpeed;
+    puck.vy = Math.cos(angle) * baseSpeed * dir;
+    phase = 'playing';
   }
 
   /* -------------------------------------------------------------- render */
@@ -215,6 +287,9 @@
     ctx.lineTo(width / 2 + goalHalfWidth, height - 2);
     ctx.stroke();
 
+    drawScore();
+    if (phase === 'countdown') drawCountdown();
+
     drawMallet('B', 'rgba(255, 62, 165, 0.85)');
     drawMallet('A', 'rgba(34, 229, 255, 0.85)');
 
@@ -235,6 +310,35 @@
     ctx.lineWidth = 3;
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
     ctx.stroke();
+  }
+
+  function drawScore() {
+    var fontSize = Math.min(width, height) * 0.08;
+    var offset = fontSize * 1.5;
+
+    ctx.font = '700 ' + fontSize + 'px ' + fontFamily;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Jugador A (abajo), lectura normal.
+    ctx.fillText(String(score.A), width / 2, height / 2 + offset);
+
+    // Jugador B (arriba), rotado 180° para que se lea desde su lado.
+    ctx.save();
+    ctx.translate(width / 2, height / 2 - offset);
+    ctx.rotate(Math.PI);
+    ctx.fillText(String(score.B), 0, 0);
+    ctx.restore();
+  }
+
+  function drawCountdown() {
+    var value = Math.max(Math.ceil(countdown), 1);
+    ctx.font = '700 ' + Math.min(width, height) * 0.16 + 'px ' + fontFamily;
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(value), width / 2, height / 2);
   }
 
   /* --------------------------------------------------------------- input */

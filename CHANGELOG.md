@@ -3,6 +3,21 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [0.9] — Fase 1
+
+### Añadido
+- Goles en Air Hockey: bocas de portería en el centro de los bordes superior
+  e inferior; el disco que sale por ellas anota, y por el resto del borde
+  rebota como una banda más.
+- Cuenta atrás de 2 s tras cada gol, con saque automático hacia el jugador
+  que ha encajado.
+- Marcador dibujado en el canvas junto a la línea central, con el número de
+  B rotado 180° para que se lea desde su lado.
+- Recolocación del disco si queda casi parado más de 5 s en una mitad.
+
+Sin límite de puntuación ni pantalla de fin de partida todavía: llegan en
+el hito 0.10, junto con pausa, sonido y vibración.
+
 ## [0.8] — Fase 1
 
 ### Añadido
