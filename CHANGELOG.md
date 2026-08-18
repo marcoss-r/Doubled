@@ -3,6 +3,37 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [1.7] — Beer Pong: detección de acierto, retirada y reagrupación
+
+### Añadido
+- Detección de acierto: al aterrizar, se busca el vaso vivo más cercano
+  dentro de un radio de acierto un 15% mayor que el vaso dibujado
+  (`findHitCup`). Si hay acierto, el vaso se marca eliminado, la bola se
+  asienta en su centro y se comprueba la reagrupación.
+- `maybeRegroup()`: reagrupa a la formación estándar más pequeña en la que
+  quepan todos los vasos vivos (10→6→3→1). Ver la nota de reagrupación en
+  `docs/games/beer-pong.md` para el caso de saltarse un umbral en un turno.
+- Animación de retirada: el vaso encoge y se desvanece durante 260ms tras
+  el acierto, en vez de desaparecer de golpe.
+- Si el lanzamiento falla, la bola da un pequeño bote amortiguado (22% de
+  la velocidad vertical original) antes de asentarse.
+
+### Arreglado
+- **Calibración de alcance:** con la potencia máxima original (rango hasta
+  1× la profundidad de la mesa), la fila trasera de vasos quedaba fuera de
+  alcance de cualquier lanzamiento — un fallo real, no sólo de ajuste fino,
+  detectado al calcular a mano la geometría antes de validar la detección
+  de acierto. El rango pasa de `depth × (0.35 a 1.05)` a
+  `depth × (0.33 a 1.4)`, con margen de sobra para alcanzar el fondo de la
+  mesa incluso a potencia máxima.
+
+Validado en Chromium headless con un swipe calculado analíticamente para
+alcanzar el vaso del vértice: el vaso desaparece con la animación de
+retirada y la bola se asienta en su posición exacta. La lógica de
+reagrupación se revisó a mano (formación inicial ya validada en el hito
+1.5); encadenar varios aciertos calibrados por temporización sintética
+tenía retorno decreciente para el riesgo real que cubre.
+
 ## [1.6] — Beer Pong: swipe con previsualización y parábola
 
 ### Añadido

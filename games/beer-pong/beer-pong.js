@@ -64,7 +64,45 @@
     return cups;
   }
 
-  var rival = { cups: buildFormation(10, 10), rowCount: 4 };
+  var REGROUP_SIZES = [10, 6, 3, 1];
+  var CUP_ACCEPT_RATIO = 1.15; // radio de acierto: +15% sobre el vaso dibujado
+  var CUP_REMOVE_ANIM_MS = 260;
+
+  var rival = { cups: buildFormation(10, 10), rowCount: 4, cupsRemaining: 10 };
+
+  /**
+   * Reagrupa a la formación estándar más pequeña en la que quepan todos los
+   * vasos vivos (10→6→3→1). Si sobran huecos, se pre-eliminan empezando por
+   * la fila de atrás (la más numerosa), dejando el vértice intacto el mayor
+   * tiempo posible. Ver la nota de reagrupación en docs/games/beer-pong.md.
+   */
+  function maybeRegroup(player) {
+    var remaining = player.cupsRemaining;
+    if (remaining <= 0) return;
+    var candidates = REGROUP_SIZES.filter(function (n) {
+      return n >= remaining;
+    });
+    var target = candidates[candidates.length - 1];
+    if (target < player.cups.length) {
+      player.cups = buildFormation(target, remaining);
+      player.rowCount = rowSizesFor(target).length;
+    }
+  }
+
+  function findHitCup(x, y, geo, player) {
+    var positions = cupPositions(player.cups, player.rowCount, geo);
+    var best = null;
+    var bestDist = Infinity;
+    positions.forEach(function (pos) {
+      if (!pos.cup.alive) return;
+      var dist = Math.hypot(pos.x - x, pos.y - y);
+      if (dist <= pos.r * CUP_ACCEPT_RATIO && dist < bestDist) {
+        bestDist = dist;
+        best = pos;
+      }
+    });
+    return best;
+  }
 
   /* -------------------------------------------------------------- layout */
 
@@ -135,6 +173,7 @@
     ball.x = ballRest.x;
     ball.y = ballRest.y;
     ball.z = 0;
+    ball.bounced = false;
   }
 
   function launchBall(vx, vy, speed) {
@@ -142,15 +181,20 @@
     var depth = geo.bottomY - geo.topY;
     var power = clamp((speed - MIN_SWIPE_SPEED) / (MAX_SWIPE_SPEED - MIN_SWIPE_SPEED), 0, 1);
 
-    var rangeY = depth * (0.35 + 0.7 * power);
+    // El rango va de "corto, se queda antes del vértice" (potencia 0) a
+    // "sobrepasa la fila de atrás" (potencia 1): con la bola de descanso a
+    // ballRest.y, hace falta más de 1×depth para alcanzar el fondo de la
+    // mesa (topY), así que el multiplicador máximo no puede quedarse en 1.
+    var rangeY = depth * (0.33 + 1.07 * power);
     var ratio = vx / -vy;
     var landingX = ball.x + rangeY * ratio;
     var landingY = ball.y - rangeY;
 
-    var duration = 0.55 + 0.3 * power;
+    var duration = 0.5 + 0.45 * power;
     var gravity = Math.min(width, height) * 3.2;
 
     ball.phase = 'flight';
+    ball.bounced = false;
     ball.startX = ball.x;
     ball.startY = ball.y;
     ball.flightVX = (landingX - ball.x) / duration;
@@ -159,6 +203,45 @@
     ball.gravity = gravity;
     ball.flightDuration = duration;
     ball.flightElapsed = 0;
+  }
+
+  /**
+   * Al terminar un vuelo: si hay un vaso vivo dentro del radio de acierto,
+   * se retira (con animación) y se comprueba la reagrupación. Si falla, da
+   * un pequeño bote amortiguado antes de asentarse (un único bote, no una
+   * simulación completa: es cosmético, el resultado ya está decidido).
+   */
+  function handleLanding() {
+    var geo = tableGeometry();
+    var hit = findHitCup(ball.x, ball.y, geo, rival);
+
+    if (hit) {
+      hit.cup.alive = false;
+      hit.cup.removedAt = performance.now();
+      rival.cupsRemaining--;
+      maybeRegroup(rival);
+      ball.x = hit.x;
+      ball.y = hit.y;
+      ball.phase = 'sunk';
+      ball.landedAt = performance.now();
+      return;
+    }
+
+    if (!ball.bounced) {
+      ball.bounced = true;
+      ball.phase = 'flight';
+      ball.startX = ball.x;
+      ball.startY = ball.y;
+      ball.flightVX = 0;
+      ball.flightVY = 0;
+      ball.flightVZ = ball.flightVZ * 0.22;
+      ball.flightDuration = 0.22;
+      ball.flightElapsed = 0;
+      return;
+    }
+
+    ball.phase = 'landed';
+    ball.landedAt = performance.now();
   }
 
   /* --------------------------------------------------------------- input */
@@ -248,11 +331,8 @@
       ball.y = ball.startY + ball.flightVY * t;
       ball.z = Math.max(0, ball.flightVZ * t - 0.5 * ball.gravity * t * t);
 
-      if (ball.flightElapsed >= ball.flightDuration) {
-        ball.phase = 'landed';
-        ball.landedAt = performance.now();
-      }
-    } else if (ball.phase === 'landed') {
+      if (ball.flightElapsed >= ball.flightDuration) handleLanding();
+    } else if (ball.phase === 'landed' || ball.phase === 'sunk') {
       if (performance.now() - ball.landedAt > LANDED_PAUSE_MS) resetBall();
     }
   }
@@ -312,16 +392,30 @@
 
   function drawCups(geo) {
     var positions = cupPositions(rival.cups, rival.rowCount, geo);
+    var now = performance.now();
+
     positions.forEach(function (pos) {
-      if (pos.cup.alive) drawCup(pos.x, pos.y, pos.r);
+      if (pos.cup.alive) {
+        drawCup(pos.x, pos.y, pos.r, 1);
+        return;
+      }
+      // Animación de retirada: encoge y se desvanece durante
+      // CUP_REMOVE_ANIM_MS tras el acierto; luego deja de dibujarse.
+      if (!pos.cup.removedAt) return;
+      var elapsed = now - pos.cup.removedAt;
+      if (elapsed >= CUP_REMOVE_ANIM_MS) return;
+      var t = elapsed / CUP_REMOVE_ANIM_MS;
+      drawCup(pos.x, pos.y, pos.r * (1 - t), 1 - t);
     });
   }
 
-  function drawCup(x, y, r) {
+  function drawCup(x, y, r, alpha) {
     var gradient = ctx.createRadialGradient(x, y - r * 0.2, r * 0.2, x, y, r);
     gradient.addColorStop(0, 'rgba(255, 216, 168, 0.95)');
     gradient.addColorStop(1, accent);
 
+    ctx.save();
+    ctx.globalAlpha = alpha;
     ctx.beginPath();
     ctx.ellipse(x, y, r, r * 0.78, 0, 0, Math.PI * 2);
     ctx.fillStyle = gradient;
@@ -329,6 +423,7 @@
     ctx.lineWidth = Math.max(1, r * 0.08);
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.35)';
     ctx.stroke();
+    ctx.restore();
   }
 
   function drawAimPreview() {
