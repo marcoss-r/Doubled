@@ -3,6 +3,28 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [2.5] — Beer Pong: pelota a proporción 0.5 y desaparición junto al vaso
+
+### Cambiado
+- La pelota pasa a medir exactamente la **mitad** del radio de la boca del
+  vaso (antes 0.55). Se dimensiona a partir de la geometría del vaso y no de
+  la pantalla (`BALL_TO_CUP_RATIO`), para que la proporción no dependa de
+  haber tocado antes el tamaño de la formación. La ventana de acierto se
+  ensancha de 8.3 a 9.2 unidades (+11 %) sin regalar ni un píxel de área
+  falsa: sigue exigiendo que la pelota quepa de verdad por la boca.
+- **Nueva secuencia al encestar.** Antes el vaso se esfumaba mientras la
+  pelota aún caía dentro. Ahora la pelota se posa en el fondo, se queda a la
+  vista 380 ms con el vaso intacto, y sólo entonces se van los dos a la vez,
+  encogiendo y apagándose al mismo ritmo. El vaso se retira al empezar esa
+  desaparición, así que el segundo tiro del turno lo sigue encontrando ya
+  fuera de la mesa.
+
+Validado en Chromium headless midiendo el radio del borde del vaso y el de la
+pelota frame a frame: durante el encogido las proporciones coinciden en cada
+frame (0.81/0.80, 0.42/0.42, 0.04/0.03) y ambos llegan a cero a la vez, con el
+recuento de vasos bajando de 10 a 9 justo después. Repasados turnos, hub,
+mute y offline.
+
 ## [2.4] — Beer Pong: sin ayuda al tirador y retirada inmediata del vaso
 
 ### Arreglado

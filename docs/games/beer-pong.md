@@ -145,6 +145,14 @@ turno y turno.
   acierto mayores que la figura. Entre ese límite y `radio + radio de la
   pelota` lo que hay es un golpe en el borde, que es contacto real, no
   tolerancia.
+- La pelota mide la **mitad** del radio de la boca del vaso
+  (`BALL_TO_CUP_RATIO`), y se dimensiona a partir del vaso y no de la
+  pantalla, para que esa proporción no dependa de haber tocado antes la
+  geometría de la formación.
+- **Al encestar, la pelota se queda a la vista dentro del vaso** y sólo
+  después se van los dos a la vez, encogiendo al mismo ritmo. El vaso se
+  retira en ese momento, no al entrar la pelota: hacerlo antes lo esfumaba
+  mientras la pelota todavía estaba cayendo dentro.
 - **Sin viento ni efecto**: la única variable es el gesto, para que la habilidad
   sea reproducible.
 - Toda la geometría en coordenadas normalizadas, igual que en Air Hockey.

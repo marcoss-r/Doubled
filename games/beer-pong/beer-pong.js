@@ -27,12 +27,14 @@
   var MAX_ANGLE = (65 * Math.PI) / 180; // más inclinado que esto: gesto cancelado
   var SAMPLE_WINDOW_MS = 80;
   var LANDED_PAUSE_MS = 450; // pausa antes de devolver la pelota al saque
+  var SUNK_SHOW_MS = 380; // la pelota se queda a la vista dentro del vaso
 
   // --- Vasos con volumen (tronco de cono en perspectiva falsa) -------------
   var SQUASH = 0.78; // achatamiento vertical de las elipses: da la perspectiva
   var CUP_HEIGHT_RATIO = 2.0; // alto del vaso respecto al radio de su boca
   var CUP_BASE_RATIO = 0.72; // radio de la base respecto al de la boca
   var CUP_SPACING_RATIO = 2.04; // separación dentro de una fila, en radios de boca
+  var BALL_TO_CUP_RATIO = 0.5; // radio de la pelota frente al de la boca del vaso
 
   // Franja de mesa que ocupa la formación (0 = fondo, 1 = borde cercano).
   // Agrupada arriba a propósito: el resto de la mesa queda libre para que la
@@ -566,7 +568,6 @@
   }
 
   function sinkBall(pos) {
-    retireCup(targetPlayer(), pos.cup);
     ball.wasHit = true;
     ball.sinkCup = pos;
     ball.phase = 'sinking';
@@ -576,6 +577,19 @@
     ball.vz = -Math.abs(ball.vz) * 0.35;
     DoubledAudio.beep(560, 0.14, 'sine');
     DoubledAudio.vibrate(18);
+  }
+
+  /**
+   * El vaso se retira aquí, no al entrar la pelota: primero se la ve posada
+   * dentro (fase 'sunk') y sólo después se van los dos juntos, encogiendo a
+   * la vez. Retirarlo en el momento del acierto hacía que el vaso se
+   * esfumara mientras la pelota todavía estaba cayendo dentro.
+   */
+  function startVanishing() {
+    retireCup(targetPlayer(), ball.sinkCup.cup);
+    ball.phase = 'vanishing';
+    ball.vanishAt = performance.now();
+    refreshHud();
   }
 
   function settleBall() {
@@ -861,7 +875,12 @@
       stepFallingBall(dt);
     } else if (ball.phase === 'sinking') {
       stepSinkingBall(dt);
-    } else if (ball.phase === 'settled' || ball.phase === 'sunk' || ball.phase === 'gone') {
+    } else if (ball.phase === 'sunk') {
+      // Quieta en el fondo del vaso, a la vista, antes de que se vayan los dos.
+      if (performance.now() - ball.landedAt > SUNK_SHOW_MS) startVanishing();
+    } else if (ball.phase === 'vanishing') {
+      if (performance.now() - ball.vanishAt > CUP_REMOVE_ANIM_MS) finishShot();
+    } else if (ball.phase === 'settled' || ball.phase === 'gone') {
       if (performance.now() - ball.landedAt > LANDED_PAUSE_MS) finishShot();
     }
   }
@@ -876,12 +895,12 @@
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // La bola era demasiado grande frente a la boca del vaso (0.65 de su
-    // radio); en una mesa real la proporción ronda 0.42, y con los vasos ya
-    // en volumen esa desproporción hacía casi imposible colarla.
-    ballRadius = Math.min(width, height) * 0.026;
     gravity = Math.min(width, height) * 3.2;
     var geo = tableGeometry();
+    // La pelota se dimensiona a partir del vaso, no de la pantalla, para que
+    // la proporción entre ambos no dependa de haber tocado antes la geometría
+    // de la formación. Se toma el vaso del vértice, el más cercano y grande.
+    ballRadius = geo.cupRadiusAt(ROWS_T_LAST) * BALL_TO_CUP_RATIO;
     // Saque pegado al borde cercano de la mesa: con los vasos al fondo, cada
     // píxel que la pelota no tiene que recorrer desde abajo es alcance útil.
     ballRest = { x: width / 2, y: geo.bottomY + (height - geo.bottomY) * 0.22 };
@@ -1036,6 +1055,12 @@
 
     var basis = Math.min(width, height);
     var shadowScale = 1 - Math.min(ball.z / (basis * 0.5), 0.6);
+    // Al desaparecer con el vaso encoge y se apaga con su mismo ritmo.
+    var vanish =
+      ball.phase === 'vanishing'
+        ? clamp((performance.now() - ball.vanishAt) / CUP_REMOVE_ANIM_MS, 0, 1)
+        : 0;
+    var radius = ballRadius * (1 - vanish);
 
     // Ni dentro de un vaso ni cayéndose al vacío hay suelo que reciba la
     // sombra: quitarla es lo que hace legible que la pelota se ha salido.
@@ -1060,16 +1085,18 @@
     // como que se pierde de vista y no como que atraviesa el fondo.
     if (ball.phase === 'falling') {
       ctx.globalAlpha = clamp(1 + ball.z / fallDepth(), 0, 1);
+    } else if (vanish > 0) {
+      ctx.globalAlpha = 1 - vanish;
     }
     ctx.beginPath();
-    ctx.arc(ball.x, screenY, ballRadius, 0, Math.PI * 2);
+    ctx.arc(ball.x, screenY, radius, 0, Math.PI * 2);
     var gradient = ctx.createRadialGradient(
-      ball.x - ballRadius * 0.3,
-      screenY - ballRadius * 0.3,
-      ballRadius * 0.1,
+      ball.x - radius * 0.3,
+      screenY - radius * 0.3,
+      radius * 0.1,
       ball.x,
       screenY,
-      ballRadius
+      radius
     );
     gradient.addColorStop(0, '#ffffff');
     gradient.addColorStop(1, '#d8dcec');
