@@ -3,6 +3,14 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [0.4] — Fase 0
+
+### Añadido
+- Planes de desarrollo individuales de los cuatro juegos en `docs/games/`:
+  `air-hockey.md`, `beer-pong.md`, `pong.md` y `battleship.md`. Cada uno cubre
+  reglas, orientación y layout, controles táctiles, mecánica, máquina de
+  estados, ficheros y assets, hitos con su versión y riesgos abiertos.
+
 ## [0.3] — Fase 0
 
 ### Añadido
