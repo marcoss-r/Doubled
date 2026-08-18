@@ -25,6 +25,12 @@ Formato `MAJOR.MINOR`, sin patch.
 | Fase 1 · goles, marcador rotado, saques y cuenta atrás | 0.9 |
 | Fase 1 · pausa, gameover, revancha, sonido y vibración | 0.10 |
 | Fase 1 · Air Hockey completo | **1.0** |
+| Fase 1 · ajustes post-cierre del marcador (v1.1-v1.4) | 1.1 – 1.4 |
+| Fase 2 · shell del juego | 1.5 |
+| Fase 2 · swipe con previsualización y parábola | 1.6 |
+| Fase 2 · detección de acierto, retirada y reagrupación | 1.7 |
+| Fase 2 · turnos, traspaso, marcador y balls back | 1.8 |
+| Fase 2 · redención, muerte súbita, gameover y revancha | 1.9 |
 | Fase 2 · Beer Pong completo | **2.0** |
 | Fase 3 · Pong completo | **3.0** |
 | Fase 4 · Hundir la flota completo | **4.0** |

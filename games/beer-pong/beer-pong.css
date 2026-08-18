@@ -1,0 +1,122 @@
+/* ==========================================================================
+   Beer Pong — layout de la mesa y HUD.
+   Requiere css/base.css (variables, safe-area, .game-stage).
+   ========================================================================== */
+
+.bp-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.bp-hud {
+  position: absolute;
+  top: var(--sp-2);
+  left: var(--sp-2);
+  right: var(--sp-2);
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.bp-hud__btn {
+  pointer-events: auto;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: rgba(20, 24, 38, 0.72);
+  border: 1px solid var(--c-border);
+  color: var(--c-text);
+  font-size: var(--fs-lg);
+  line-height: 1;
+}
+
+.bp-hud__right {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.bp-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-5);
+  background: rgba(4, 5, 10, 0.9);
+  text-align: center;
+}
+
+.bp-overlay[hidden] {
+  display: none;
+}
+
+.bp-overlay__content {
+  max-width: 22rem;
+}
+
+.bp-overlay__title {
+  font-size: var(--fs-2xl);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bp-overlay__subtitle {
+  margin-top: var(--sp-3);
+  color: var(--c-text-dim);
+}
+
+.bp-overlay__actions {
+  margin-top: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.bp-overlay__actions[hidden] {
+  display: none;
+}
+
+.bp-overlay__btn {
+  min-height: var(--tap-min);
+  display: grid;
+  place-items: center;
+  padding-inline: var(--sp-4);
+  border-radius: var(--radius-md);
+  background: var(--c-beer-pong);
+  color: #241300;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.bp-overlay__btn--ghost {
+  background: transparent;
+  border: 1px solid var(--c-border-strong);
+  color: var(--c-text);
+}
+
+.bp-rotate-warning {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6);
+  background: var(--c-bg);
+  color: var(--c-text-dim);
+  text-align: center;
+  font-size: var(--fs-lg);
+}
+
+.bp-rotate-warning[hidden] {
+  display: none;
+}

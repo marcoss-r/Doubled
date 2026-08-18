@@ -3,6 +3,14 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [1.5] — Beer Pong: shell del juego
+
+### Añadido
+- Shell de Beer Pong (`games/beer-pong/`): mesa en perspectiva falsa
+  (trapecio) con la formación inicial de 10 vasos (4-3-2-1), aviso de
+  orientación en horizontal. Sin física ni entrada todavía.
+- Alta del bloque `'beer-pong'` en el service worker.
+
 ## [1.4] — Air Hockey: ajuste fino de la posición de los dígitos
 
 ### Cambiado

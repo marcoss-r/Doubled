@@ -164,12 +164,25 @@ games/beer-pong/
 
 | Hito | Versión |
 |---|---|
-| Shell del juego, mesa en perspectiva, alta en hub y SW | 1.1 |
-| Gesto de swipe con previsualización y parábola | 1.2 |
-| Detección de acierto, retirada y reagrupación de vasos | 1.3 |
-| Turnos, pantalla de traspaso, marcador y *balls back* | 1.4 |
-| Redención, muerte súbita, gameover y revancha | 1.5 |
-| Sonido, vibración, pulido y pruebas en dispositivos reales | **2.0** |
+| Shell del juego, mesa en perspectiva, alta en SW | 1.5 |
+| Gesto de swipe con previsualización y parábola | 1.6 |
+| Detección de acierto, retirada y reagrupación de vasos | 1.7 |
+| Turnos, pantalla de traspaso, marcador y *balls back* | 1.8 |
+| Redención, muerte súbita, gameover y revancha | 1.9 |
+| Sonido, vibración, pulido, alta en el hub y pruebas en dispositivos reales | **2.0** |
+
+> **Nota de versionado.** El plan original numeraba estos hitos 1.1-1.5; esas
+> versiones las consumieron los ajustes del marcador de Air Hockey después de
+> cerrar la Fase 1 (v1.0), así que Beer Pong arranca en 1.5. Ver
+> `docs/CONVENTIONS.md` §1.
+
+> **Nota de reagrupación.** La regla "se reagrupa a 6, 3 y 1 vasos" no cubre
+> el caso de que un turno tire la cuenta por debajo de uno de esos umbrales
+> sin pasar exactamente por él (p. ej. de 8 a 5 en un mismo turno, con *balls
+> back*). Implementado como: se reagrupa al triángulo estándar más pequeño
+> que quepan todos los vasos vivos (10→6→3→1), y si sobran huecos se
+> pre-eliminan empezando por la fila de atrás, dejando la fila delantera
+> (el vértice) intacta el mayor tiempo posible.
 
 ---
 

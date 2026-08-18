@@ -41,8 +41,12 @@ var ASSET_BLOCKS = {
     './js/shared/input.js',
     './js/shared/storage.js',
     './js/shared/audio.js'
+  ],
+  'beer-pong': [
+    './games/beer-pong/index.html',
+    './games/beer-pong/beer-pong.css',
+    './games/beer-pong/beer-pong.js'
   ]
-  // 'beer-pong':  [...]                          ← Fase 2
   // 'pong':       [...]                          ← Fase 3
   // 'battleship': [...]                          ← Fase 4
 };

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Beer Pong — Doubled</title>
+    <meta
+      name="description"
+      content="Beer pong por turnos para dos jugadores en el mismo móvil."
+    />
+
+    <link rel="manifest" href="../../manifest.webmanifest" />
+    <meta name="theme-color" content="#07080d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Doubled" />
+    <link rel="apple-touch-icon" href="../../assets/icons/apple-touch-icon-180.png" />
+    <link rel="icon" href="../../assets/icons/icon-192.png" sizes="192x192" type="image/png" />
+
+    <link rel="stylesheet" href="../../css/base.css" />
+    <link rel="stylesheet" href="./beer-pong.css" />
+  </head>
+  <body>
+    <div class="game-stage no-touch-gestures" id="stage">
+      <canvas class="bp-canvas" id="table" aria-hidden="true"></canvas>
+
+      <div class="bp-hud">
+        <a class="bp-hud__btn" href="../../index.html" aria-label="Volver al hub">✕</a>
+      </div>
+
+      <div class="bp-rotate-warning" id="rotate-warning" hidden>
+        <p>Gira el móvil a vertical para jugar</p>
+      </div>
+    </div>
+
+    <script src="../../js/shared/version.js"></script>
+    <script src="../../js/shared/register-sw.js"></script>
+    <script src="./beer-pong.js"></script>
+  </body>
+</html>
