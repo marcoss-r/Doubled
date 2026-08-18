@@ -44,19 +44,26 @@ render, entrada multitáctil, colisiones), que Pong reutilizará en Fase 3.
 - Reparto vertical del área jugable:
 
   ```
-  ┌──────────────────────┐  ← borde superior = fondo del jugador B
-  │  portería B          │
-  │                      │
-  │   mitad de B         │
-  ├──── marcador ────────┤  ← línea central + marcador
-  │   mitad de A         │
-  │                      │
-  │  portería A          │
-  └──────────────────────┘  ← borde inferior = fondo del jugador A
+  ┌──────────────────┬──┐  ← borde superior = fondo del jugador B
+  │  portería B       │B │
+  │                   │  │
+  │   mitad de B      │  │
+  ├──── línea central ┤  │  ← línea central, sin marcador encima
+  │   mitad de A      │  │
+  │                   │  │
+  │  portería A       │A │
+  └──────────────────┴──┘  ← borde inferior = fondo del jugador A
   ```
 
-- **Marcador central**, en la línea de medio campo: dos marcadores idénticos,
-  el del jugador B **rotado 180°** para que se lea desde su lado.
+- **Marcador en franja lateral derecha**, no en el centro: un marcador
+  plantado sobre la línea de medio campo queda tapado por el disco y los
+  malletes en cuanto hay partida en marcha (detectado al jugar de verdad, no
+  en el diseño sobre el papel). En su lugar, el área jugable cede una franja
+  fija a la derecha (18% del lado corto) con los dos marcadores apilados —el
+  de B arriba, el de A abajo—, separados de la mesa por una línea divisoria.
+  Los dígitos van rotados 90° en sentido horario (`ctx.rotate(Math.PI/2)`) para
+  leerse del derecho girando el móvil a horizontal con el lateral derecho
+  hacia arriba, en vez de plantados en vertical en mitad del campo.
 - La mesa se dibuja en un único `<canvas>` a resolución de dispositivo
   (`devicePixelRatio`, con tope de 3 para no penalizar el rendimiento en
   pantallas grandes). La UI no jugable (botón de pausa, avisos) va en DOM sobre

@@ -3,6 +3,20 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [1.1] — Air Hockey: marcador lateral
+
+### Cambiado
+- El marcador deja el centro de la mesa (donde quedaba tapado por el disco
+  y los malletes en cuanto había partida en marcha) y pasa a una franja fija
+  en el lateral derecho, separada del área jugable por una línea divisoria.
+  El área jugable se estrecha en consecuencia (reserva un 18% del lado corto
+  para la franja).
+- Los dígitos del marcador van rotados 90° en sentido horario: se leen del
+  derecho girando el móvil a horizontal con el lateral derecho hacia arriba,
+  en vez de plantados en vertical. Marcador de B arriba, de A abajo, mismo
+  sentido de lectura para ambos (ya no van uno rotado 180° respecto al otro,
+  al no compartir posición con la línea central).
+
 ## [1.0] — Air Hockey completo (cierre de Fase 1)
 
 ### Añadido

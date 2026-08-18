@@ -35,8 +35,11 @@
     getComputedStyle(document.documentElement).getPropertyValue('--font-display').trim() ||
     'system-ui, sans-serif';
 
+  var SCOREBOARD_RATIO = 0.18;
+
   var width = 0;
   var height = 0;
+  var tableWidth = 0; // ancho jugable: width menos la franja del marcador
   var malletRadius = 0;
   var puckRadius = 0;
   var goalHalfWidth = 0;
@@ -64,7 +67,7 @@
 
   function resetMallet(id) {
     var m = mallets[id];
-    m.x = width / 2;
+    m.x = tableWidth / 2;
     m.y = id === 'A' ? height * 0.82 : height * 0.18;
     m.prevX = m.x;
     m.prevY = m.y;
@@ -74,7 +77,7 @@
 
   function clampMallet(id) {
     var m = mallets[id];
-    m.x = clamp(m.x, malletRadius, width - malletRadius);
+    m.x = clamp(m.x, malletRadius, tableWidth - malletRadius);
     if (id === 'A') {
       m.y = clamp(m.y, height / 2 + malletRadius, height - malletRadius);
     } else {
@@ -83,7 +86,7 @@
   }
 
   function centerPuck() {
-    puck.x = width / 2;
+    puck.x = tableWidth / 2;
     puck.y = height / 2;
     puck.vx = 0;
     puck.vy = 0;
@@ -91,7 +94,7 @@
 
   function resize() {
     var rect = stage.getBoundingClientRect();
-    var oldWidth = width;
+    var oldTableWidth = tableWidth;
     var oldHeight = height;
 
     width = rect.width;
@@ -102,13 +105,18 @@
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    malletRadius = Math.min(width, height) * 0.085;
-    puckRadius = Math.min(width, height) * 0.045;
-    goalHalfWidth = width * 0.17;
-    maxPuckSpeed = Math.min(width, height) * 1.6;
+    // El marcador vive en una franja lateral fija a la derecha; el área
+    // jugable es el resto del ancho, no el canvas completo.
+    var scoreboardWidth = Math.min(width, height) * SCOREBOARD_RATIO;
+    tableWidth = width - scoreboardWidth;
 
-    if (oldWidth && oldHeight) {
-      var sx = width / oldWidth;
+    malletRadius = Math.min(tableWidth, height) * 0.085;
+    puckRadius = Math.min(tableWidth, height) * 0.045;
+    goalHalfWidth = tableWidth * 0.17;
+    maxPuckSpeed = Math.min(tableWidth, height) * 1.6;
+
+    if (oldTableWidth && oldHeight) {
+      var sx = tableWidth / oldTableWidth;
       var sy = height / oldHeight;
       puck.x *= sx;
       puck.y *= sy;
@@ -178,12 +186,12 @@
     if (puck.x < puckRadius) {
       puck.x = puckRadius;
       puck.vx = -puck.vx * RESTITUTION_WALL;
-    } else if (puck.x > width - puckRadius) {
-      puck.x = width - puckRadius;
+    } else if (puck.x > tableWidth - puckRadius) {
+      puck.x = tableWidth - puckRadius;
       puck.vx = -puck.vx * RESTITUTION_WALL;
     }
 
-    var inGoalRange = Math.abs(puck.x - width / 2) < goalHalfWidth;
+    var inGoalRange = Math.abs(puck.x - tableWidth / 2) < goalHalfWidth;
 
     if (puck.y < puckRadius) {
       if (inGoalRange) {
@@ -233,11 +241,11 @@
   }
 
   function handleStall(dt, speed) {
-    if (speed < Math.min(width, height) * STALL_SPEED_FACTOR) {
+    if (speed < Math.min(tableWidth, height) * STALL_SPEED_FACTOR) {
       stallTimer += dt;
       if (stallTimer >= STALL_LIMIT) {
         var half = puck.y < height / 2 ? 'B' : 'A';
-        puck.x = width / 2;
+        puck.x = tableWidth / 2;
         puck.y = half === 'A' ? height * 0.75 : height * 0.25;
         puck.vx = 0;
         puck.vy = 0;
@@ -278,7 +286,7 @@
   }
 
   function launchPuck() {
-    var baseSpeed = Math.min(width, height) * 0.5;
+    var baseSpeed = Math.min(tableWidth, height) * 0.5;
     var angle = Math.random() * 0.6 - 0.3;
     var dir = serveTo === 'A' ? 1 : -1;
     puck.vx = Math.sin(angle) * baseSpeed;
@@ -299,24 +307,24 @@
     ctx.setLineDash([10, 10]);
     ctx.beginPath();
     ctx.moveTo(0, height / 2);
-    ctx.lineTo(width, height / 2);
+    ctx.lineTo(tableWidth, height / 2);
     ctx.stroke();
     ctx.setLineDash([]);
 
     ctx.beginPath();
-    ctx.arc(width / 2, height / 2, Math.min(width, height) * 0.14, 0, Math.PI * 2);
+    ctx.arc(tableWidth / 2, height / 2, Math.min(tableWidth, height) * 0.14, 0, Math.PI * 2);
     ctx.stroke();
 
     ctx.strokeStyle = accent;
     ctx.lineWidth = 4;
     ctx.beginPath();
-    ctx.moveTo(width / 2 - goalHalfWidth, 2);
-    ctx.lineTo(width / 2 + goalHalfWidth, 2);
-    ctx.moveTo(width / 2 - goalHalfWidth, height - 2);
-    ctx.lineTo(width / 2 + goalHalfWidth, height - 2);
+    ctx.moveTo(tableWidth / 2 - goalHalfWidth, 2);
+    ctx.lineTo(tableWidth / 2 + goalHalfWidth, 2);
+    ctx.moveTo(tableWidth / 2 - goalHalfWidth, height - 2);
+    ctx.lineTo(tableWidth / 2 + goalHalfWidth, height - 2);
     ctx.stroke();
 
-    drawScore();
+    drawScoreboard();
     if (phase === 'countdown') drawCountdown();
 
     drawMallet('B', 'rgba(255, 62, 165, 0.85)');
@@ -341,31 +349,50 @@
     ctx.stroke();
   }
 
-  function drawScore() {
-    var fontSize = Math.min(width, height) * 0.08;
-    var offset = fontSize * 1.5;
+  /**
+   * Marcador en la franja lateral derecha (fuera de la mesa: no tapa nunca
+   * el disco). Los dígitos van rotados 90° en sentido horario para que se
+   * lean del derecho girando el móvil a horizontal con el lateral derecho
+   * hacia arriba, en vez de estar plantados en el centro de la mesa.
+   */
+  function drawScoreboard() {
+    var stripWidth = width - tableWidth;
 
-    ctx.font = '700 ' + fontSize + 'px ' + fontFamily;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+    ctx.fillRect(tableWidth, 0, stripWidth, height);
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(tableWidth, 0);
+    ctx.lineTo(tableWidth, height);
+    ctx.stroke();
+
+    var centerX = tableWidth + stripWidth / 2;
+    ctx.font = '700 ' + stripWidth * 0.6 + 'px ' + fontFamily;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    ctx.fillText(String(score.A), width / 2, height / 2 + offset);
+    drawRotatedText(String(score.B), centerX, height * 0.25);
+    drawRotatedText(String(score.A), centerX, height * 0.75);
+  }
 
+  function drawRotatedText(text, x, y) {
     ctx.save();
-    ctx.translate(width / 2, height / 2 - offset);
-    ctx.rotate(Math.PI);
-    ctx.fillText(String(score.B), 0, 0);
+    ctx.translate(x, y);
+    ctx.rotate(Math.PI / 2);
+    ctx.fillText(text, 0, 0);
     ctx.restore();
   }
 
   function drawCountdown() {
     var value = Math.max(Math.ceil(countdown), 1);
-    ctx.font = '700 ' + Math.min(width, height) * 0.16 + 'px ' + fontFamily;
+    ctx.font = '700 ' + Math.min(tableWidth, height) * 0.16 + 'px ' + fontFamily;
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(String(value), width / 2, height / 2);
+    ctx.fillText(String(value), tableWidth / 2, height / 2);
   }
 
   /* ------------------------------------------------------------- overlay */
