@@ -164,12 +164,12 @@ games/air-hockey/
 
 | Hito | Versión |
 |---|---|
-| Shell del juego: página, canvas escalado, aviso de orientación, alta en el hub y en el SW | 0.5 |
-| Física base: disco, bandas, malletes movidos con el ratón | 0.6 |
-| Entrada multitáctil real y límites por mitad | 0.7 |
-| Goles, marcador rotado, saques y cuenta atrás | 0.8 |
-| Pausa, gameover, revancha, sonido y vibración | 0.9 |
-| Pulido y pruebas en iPhone y Android reales | **1.0** |
+| Shell del juego: página, canvas escalado, aviso de orientación, alta en el SW | 0.6 |
+| Física base: disco, bandas, un mallet movido con el ratón | 0.7 |
+| Entrada multitáctil real y límites por mitad | 0.8 |
+| Goles, marcador rotado, saques y cuenta atrás | 0.9 |
+| Pausa, gameover, revancha, sonido y vibración | 0.10 |
+| Pulido, alta en el hub y pruebas en iPhone y Android reales | **1.0** |
 
 ---
 

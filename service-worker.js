@@ -32,8 +32,12 @@ var ASSET_BLOCKS = {
     './assets/icons/maskable-192.png',
     './assets/icons/maskable-512.png',
     './assets/icons/apple-touch-icon-180.png'
+  ],
+  'air-hockey': [
+    './games/air-hockey/index.html',
+    './games/air-hockey/air-hockey.css',
+    './games/air-hockey/air-hockey.js'
   ]
-  // 'air-hockey': ['./games/air-hockey/', ...]  ← Fase 1
   // 'beer-pong':  [...]                          ← Fase 2
   // 'pong':       [...]                          ← Fase 3
   // 'battleship': [...]                          ← Fase 4

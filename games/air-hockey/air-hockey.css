@@ -1,0 +1,122 @@
+/* ==========================================================================
+   Air Hockey — layout de la mesa y HUD.
+   Requiere css/base.css (variables, safe-area, .game-stage).
+   ========================================================================== */
+
+.ah-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.ah-hud {
+  position: absolute;
+  top: var(--sp-2);
+  left: var(--sp-2);
+  right: var(--sp-2);
+  z-index: 2;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.ah-hud__btn {
+  pointer-events: auto;
+  width: var(--tap-min);
+  height: var(--tap-min);
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-pill);
+  background: rgba(20, 24, 38, 0.72);
+  border: 1px solid var(--c-border);
+  color: var(--c-text);
+  font-size: var(--fs-lg);
+  line-height: 1;
+}
+
+.ah-hud__right {
+  display: flex;
+  gap: var(--sp-2);
+}
+
+.ah-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-5);
+  background: rgba(4, 5, 10, 0.86);
+  text-align: center;
+}
+
+.ah-overlay[hidden] {
+  display: none;
+}
+
+.ah-overlay__content {
+  max-width: 22rem;
+}
+
+.ah-overlay__title {
+  font-size: var(--fs-2xl);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ah-overlay__subtitle {
+  margin-top: var(--sp-3);
+  color: var(--c-text-dim);
+}
+
+.ah-overlay__actions {
+  margin-top: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.ah-overlay__actions[hidden] {
+  display: none;
+}
+
+.ah-overlay__btn {
+  min-height: var(--tap-min);
+  display: grid;
+  place-items: center;
+  padding-inline: var(--sp-4);
+  border-radius: var(--radius-md);
+  background: var(--c-air-hockey);
+  color: #04141c;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ah-overlay__btn--ghost {
+  background: transparent;
+  border: 1px solid var(--c-border-strong);
+  color: var(--c-text);
+}
+
+.ah-rotate-warning {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6);
+  background: var(--c-bg);
+  color: var(--c-text-dim);
+  text-align: center;
+  font-size: var(--fs-lg);
+}
+
+.ah-rotate-warning[hidden] {
+  display: none;
+}

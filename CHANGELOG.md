@@ -3,6 +3,14 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [0.6] — Fase 1
+
+### Añadido
+- Shell de Air Hockey (`games/air-hockey/`): página, mesa dibujada en canvas
+  escalado a `devicePixelRatio` (tope 3), aviso de orientación en horizontal.
+  Sin física ni entrada todavía. Alta del bloque `'air-hockey'` en el service
+  worker.
+
 ## [0.5] — Fase 0
 
 ### Arreglado
