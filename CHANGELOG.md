@@ -3,6 +3,33 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [2.6] — Beer Pong: la pelota vuelve a entrar, y los vasos dejan de pisarse
+
+### Arreglado
+- **La pelota botaba encima de los vasos y no entraba nunca.** No era cosa de
+  su tamaño: la condición de entrada de 2.4 (`distancia ≤ radio − radio de la
+  pelota`, pensada para no dar ventaja) dejaba un agujero de sólo la cuarta
+  parte del área de la boca, rodeado de un anillo de rebote **ocho veces
+  mayor**. Como los anillos de vasos contiguos se solapaban 17.7 unidades, el
+  racimo entero funcionaba como una tapa continua con agujeritos.
+  Ahora entra si el centro de la pelota pasa por encima del agujero
+  (`distancia ≤ radio`): la zona que acepta es exactamente el borde dibujado,
+  ni un píxel más ancha, y la proporción anillo/agujero baja de 8.0× a 1.25×.
+  En el barrido de potencias se pasa de 1-2 aciertos sobre 10 a 7 sobre 10.
+- **Vasos solapados.** Cada vaso se dibujaba 36.9 px de alto mientras las
+  filas se separaban sólo 29.3 px, así que el cuerpo de cada uno se montaba
+  7.6 px sobre el de atrás. Se baja el alto del vaso (`CUP_HEIGHT_RATIO` de
+  2.0 a 1.7) y se separan un poco las filas (franja `t` 0.12-0.35): 31.6 px
+  de alto frente a 33.6 px entre filas, solape cero. La mesa libre por
+  delante se mantiene en 285 px.
+
+El tamaño de la pelota se deja en la proporción 0.5 pedida en 2.5: revisado
+el problema, no era la causa.
+
+Validado en Chromium headless: barrido de potencias con 7 aciertos de 10,
+captura de la formación sin solapes, y repasados turnos, hub, mute, offline,
+caída fuera de la mesa y la sincronía de la desaparición pelota+vaso.
+
 ## [2.5] — Beer Pong: pelota a proporción 0.5 y desaparición junto al vaso
 
 ### Cambiado

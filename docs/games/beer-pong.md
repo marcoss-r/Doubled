@@ -66,6 +66,11 @@ turno y turno.
   resto —unas dos terceras partes— queda despejado a propósito: es la
   superficie sobre la que la pelota puede botar antes de llegar a los vasos,
   y sin ella los tiros de bote no tienen sitio donde ocurrir.
+- **El alto del vaso y la separación entre filas van atados.** Si el vaso es
+  más alto que lo que se separan dos filas, su cuerpo se monta sobre el de
+  atrás y la formación se ve amontonada. Al tocar `CUP_HEIGHT_RATIO` o
+  `ROWS_T_*` hay que rehacer esa cuenta: alto del vaso más grande ≤ distancia
+  entre filas.
 
 - La zona de swipe ocupa el tercio inferior porque es donde llega el pulgar con
   el móvil en una mano; la parte alta queda sólo para mirar.
@@ -139,12 +144,17 @@ turno y turno.
   un lateral no queda flotando: entra en caída libre, se apaga conforme baja y
   desaparece. El borde cercano no cuenta como salir —por delante está el suelo
   del jugador, y además el saque arranca justo ahí—.
-- **Sin ninguna ayuda al tirador.** La pelota entra sólo si de verdad cabe por
-  la boca: su contorno completo tiene que quedar dentro del borde dibujado
-  (`distancia ≤ radio de la boca − radio de la pelota`). Nada de radios de
-  acierto mayores que la figura. Entre ese límite y `radio + radio de la
-  pelota` lo que hay es un golpe en el borde, que es contacto real, no
-  tolerancia.
+- **Sin ninguna ayuda al tirador, pero sin castigo tampoco.** La pelota entra
+  si su centro pasa por encima del agujero, es decir si cae dentro del borde
+  dibujado (`distancia ≤ radio de la boca`): la zona que acepta es
+  exactamente la figura, ni un píxel más ancha. Fuera de ahí y hasta
+  `radio + radio de la pelota` hay golpe en el borde, que es contacto real.
+- **Cuidado con endurecer esa condición.** Exigir además que la pelota
+  cupiera entera (`radio − radio de la pelota`) parece lo riguroso, pero con
+  una pelota que mide medio radio deja un agujero de la cuarta parte del área
+  de la boca rodeado de un anillo de rebote ocho veces mayor. Como los
+  anillos de vasos contiguos se solapan, el racimo entero se comporta como
+  una tapa continua: la pelota bota encima y no entra nunca.
 - La pelota mide la **mitad** del radio de la boca del vaso
   (`BALL_TO_CUP_RATIO`), y se dimensiona a partir del vaso y no de la
   pantalla, para que esa proporción no dependa de haber tocado antes la

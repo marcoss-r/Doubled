@@ -31,7 +31,11 @@
 
   // --- Vasos con volumen (tronco de cono en perspectiva falsa) -------------
   var SQUASH = 0.78; // achatamiento vertical de las elipses: da la perspectiva
-  var CUP_HEIGHT_RATIO = 2.0; // alto del vaso respecto al radio de su boca
+  // Alto del vaso respecto al radio de su boca. Va atado a la separación
+  // entre filas: si el vaso es más alto que lo que se separan dos filas, el
+  // cuerpo de uno se mete por encima del de atrás y la formación se ve
+  // amontonada. Ver la comprobación de ROWS_T_* más abajo.
+  var CUP_HEIGHT_RATIO = 1.7;
   var CUP_BASE_RATIO = 0.72; // radio de la base respecto al de la boca
   var CUP_SPACING_RATIO = 2.04; // separación dentro de una fila, en radios de boca
   var BALL_TO_CUP_RATIO = 0.5; // radio de la pelota frente al de la boca del vaso
@@ -39,8 +43,11 @@
   // Franja de mesa que ocupa la formación (0 = fondo, 1 = borde cercano).
   // Agrupada arriba a propósito: el resto de la mesa queda libre para que la
   // pelota pueda botar en ella antes de llegar a los vasos.
-  var ROWS_T_FIRST = 0.13;
-  var ROWS_T_LAST = 0.33;
+  // Separadas lo justo para que ningún vaso pise al de detrás: con cuatro
+  // filas, esta franja deja ~34 px entre filas frente a los ~32 px de alto
+  // del vaso más grande.
+  var ROWS_T_FIRST = 0.12;
+  var ROWS_T_LAST = 0.35;
 
   // --- Arco del lanzamiento ------------------------------------------------
   // Altura de la cúspide, en fracción del lado corto. Con vasos que ahora
@@ -618,10 +625,15 @@
       var cy = prevY + (ball.y - prevY) * f;
       var dist = tableDistance(cx - pos.x, cy - pos.y);
 
-      // Sin ninguna ayuda al tirador: la pelota entra sólo si de verdad cabe
-      // por la boca, es decir si su contorno completo queda dentro del borde
-      // dibujado. Nada de radios de acierto mayores que la figura.
-      if (dist <= pos.r - ballRadius) {
+      // Entra si el centro de la pelota pasa por encima del agujero, es
+      // decir si cae dentro del borde dibujado: la zona que acepta es
+      // exactamente la figura, ni un píxel más ancha. Exigir además que
+      // cupiera entera (`r - radio de la pelota`) dejaba un agujero de una
+      // cuarta parte del área de la boca rodeado de un anillo de rebote
+      // ocho veces mayor; como los anillos de vasos contiguos se solapan,
+      // el racimo entero se comportaba como una tapa continua y la pelota
+      // botaba encima sin entrar nunca.
+      if (dist <= pos.r) {
         ball.x = cx;
         ball.y = cy;
         ball.z = pos.h;
