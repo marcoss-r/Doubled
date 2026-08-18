@@ -3,6 +3,31 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [1.9] — Beer Pong: redención, muerte súbita, gameover y revancha
+
+### Añadido
+- Estado de partida completo en `endTurn()`: cuando un jugador se queda sin
+  vasos en un turno normal, el rival recibe un **tiro de redención** en su
+  siguiente turno (que le toca de todas formas por la alternancia). Si la
+  redención también vacía al líder, empieza la **muerte súbita** (ambos
+  jugadores a 3 vasos); si falla, gana el líder.
+- `js/shared/handover.js` gana un tercer parámetro opcional (`subtitle`)
+  para anunciar «¡Tiro de redención!» o «¡Muerte súbita!» en la pantalla de
+  traspaso en vez del texto genérico.
+- Overlay de fin de partida (`#overlay`, mismo patrón que Air Hockey): título
+  con el ganador, subtítulo con quién se quedó sin vasos, y opciones de
+  Revancha (`resetGame()`, reinicia ambos jugadores a 10 vasos) o Volver al
+  hub.
+
+Validado en Chromium headless: los elementos del overlay y el botón de
+revancha cargan sin errores (ninguna referencia rota a getElementById);
+forzando el overlay visualmente se confirma el estilo y que Revancha oculta
+el overlay, reinicia el HUD y vuelve a mostrar el traspaso. La ruta
+completa de redención/muerte súbita (que exige diez aciertos calibrados
+más una redención fallida) se validó por revisión de código, no jugada de
+principio a fin: mismo criterio de coste/beneficio aplicado al `WIN_SCORE`
+de Air Hockey.
+
 ## [1.8] — Beer Pong: turnos, traspaso, marcador y balls back
 
 ### Añadido

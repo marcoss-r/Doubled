@@ -1,7 +1,8 @@
 /**
  * Beer Pong — Doubled.
- * Fase 2, hito 1.8: turnos, pantalla de traspaso, marcador y balls back.
- * Redención, muerte súbita y gameover llegan en el hito 1.9.
+ * Fase 2, hito 1.9: redención, muerte súbita, gameover y revancha.
+ * El pulido final, el sonido/vibración y el alta en el hub llegan en el
+ * hito 2.0.
  */
 (function () {
   'use strict';
@@ -11,6 +12,10 @@
   var ctx = canvas.getContext('2d');
   var rotateWarning = document.getElementById('rotate-warning');
   var hudStatus = document.getElementById('hud-status');
+  var overlay = document.getElementById('overlay');
+  var overlayTitle = document.getElementById('overlay-title');
+  var overlaySubtitle = document.getElementById('overlay-subtitle');
+  var rematchBtn = document.getElementById('rematch-btn');
   var handover = DoubledHandover.create();
 
   var MAX_DPR = 3;
@@ -79,7 +84,10 @@
   var turnHits = 0;
   var ballBackGranted = false;
   var turnShotsLimit = TURN_SHOTS;
-  var turnPhase = 'handover'; // 'handover' | 'playing'
+  var turnPhase = 'handover'; // 'handover' | 'playing' | 'gameover'
+  var redemptionActive = false; // el turno que viene es el tiro de redención
+  var suddenDeath = false;
+  var winner = null;
 
   function opponentOf(id) {
     return id === 'A' ? 'B' : 'A';
@@ -236,9 +244,48 @@
     if (shotsThisTurn >= turnShotsLimit) endTurn();
   }
 
+  /**
+   * Cierra el turno. Si el objetivo se ha quedado sin vasos:
+   *  - En un turno normal, no se acaba la partida todavía: el objetivo
+   *    (que es a quien le toca tirar a continuación, por la alternancia
+   *    normal) recibe un tiro de redención.
+   *  - Si el turno que se cierra ERA la redención y también deja al líder
+   *    sin vasos, empieza la muerte súbita (3 vasos por bando).
+   *  - Si el turno que se cierra ERA la redención y no lo consigue, gana
+   *    el líder.
+   *  - En muerte súbita, el primero que deja al otro sin vasos gana, sin
+   *    otra redención.
+   */
   function endTurn() {
-    var target = targetPlayer(); // capturado antes de cambiar de jugador
+    var shooter = currentPlayer; // quien acaba de tirar este turno
+    var target = targetPlayer(); // a quien atacaba, capturado antes de girar turno
+    var wasRedemptionTurn = redemptionActive;
+
     retirePendingHits(target);
+    var targetWipedOut = target.cupsRemaining <= 0;
+
+    if (wasRedemptionTurn) {
+      redemptionActive = false;
+      if (targetWipedOut) {
+        startSuddenDeath();
+        return;
+      }
+      winner = opponentOf(shooter); // el líder resistió la redención
+      showGameOver();
+      return;
+    }
+
+    if (suddenDeath && targetWipedOut) {
+      winner = shooter;
+      showGameOver();
+      return;
+    }
+
+    if (targetWipedOut) {
+      // Whiteout normal: el objetivo recibe un tiro de redención en su
+      // próximo turno, que le toca de todas formas por la alternancia.
+      redemptionActive = true;
+    }
 
     currentPlayer = opponentOf(currentPlayer);
     shotsThisTurn = 0;
@@ -247,11 +294,74 @@
     turnShotsLimit = TURN_SHOTS;
     turnPhase = 'handover';
 
+    var subtitle = redemptionActive ? '¡Tiro de redención! Toca cuando estés listo' : undefined;
+    handover.show(
+      'Pasa el móvil a ' + players[currentPlayer].name,
+      function () {
+        turnPhase = 'playing';
+      },
+      subtitle
+    );
+    refreshHud();
+  }
+
+  function startSuddenDeath() {
+    suddenDeath = true;
+    ['A', 'B'].forEach(function (id) {
+      players[id].cups = buildFormation(3, 3);
+      players[id].rowCount = rowSizesFor(3).length;
+      players[id].cupsRemaining = 3;
+    });
+
+    currentPlayer = opponentOf(currentPlayer);
+    shotsThisTurn = 0;
+    turnHits = 0;
+    ballBackGranted = false;
+    turnShotsLimit = TURN_SHOTS;
+    turnPhase = 'handover';
+
+    handover.show(
+      'Pasa el móvil a ' + players[currentPlayer].name,
+      function () {
+        turnPhase = 'playing';
+      },
+      '¡Muerte súbita! 3 vasos por bando'
+    );
+    refreshHud();
+  }
+
+  function showGameOver() {
+    var loserId = opponentOf(winner);
+    overlayTitle.textContent = players[winner].name + ' gana';
+    overlaySubtitle.textContent = players[loserId].name + ' se quedó sin vasos';
+    overlay.hidden = false;
+    turnPhase = 'gameover';
+  }
+
+  function resetGame() {
+    players.A = newPlayer('Jugador 1');
+    players.B = newPlayer('Jugador 2');
+    currentPlayer = 'A';
+    shotsThisTurn = 0;
+    turnHits = 0;
+    ballBackGranted = false;
+    turnShotsLimit = TURN_SHOTS;
+    redemptionActive = false;
+    suddenDeath = false;
+    winner = null;
+    resetBall();
+    overlay.hidden = true;
+    turnPhase = 'handover';
+
     handover.show('Pasa el móvil a ' + players[currentPlayer].name, function () {
       turnPhase = 'playing';
     });
     refreshHud();
   }
+
+  rematchBtn.addEventListener('click', function () {
+    resetGame();
+  });
 
   function refreshHud() {
     if (!hudStatus) return;

@@ -25,6 +25,8 @@
     document.body.appendChild(el);
 
     var titleEl = el.querySelector('.handover__title');
+    var subtitleEl = el.querySelector('.handover__subtitle');
+    var defaultSubtitle = subtitleEl.textContent;
     var btn = el.querySelector('.handover__btn');
     var onReadyCallback = null;
 
@@ -34,8 +36,9 @@
       if (callback) callback();
     });
 
-    function show(title, onReady) {
+    function show(title, onReady, subtitle) {
       titleEl.textContent = title;
+      subtitleEl.textContent = subtitle || defaultSubtitle;
       onReadyCallback = onReady || null;
       el.hidden = false;
     }
