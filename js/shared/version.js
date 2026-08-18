@@ -14,7 +14,7 @@
  *
  * Ver docs/CONVENTIONS.md → "Checklist de versionado".
  */
-var APP_VERSION = '1.1';
+var APP_VERSION = '1.2';
 
 /** Nombre del caché del service worker, derivado de la versión. */
 var CACHE_NAME = 'doubled-v' + APP_VERSION;

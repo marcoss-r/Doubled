@@ -35,15 +35,14 @@
     getComputedStyle(document.documentElement).getPropertyValue('--font-display').trim() ||
     'system-ui, sans-serif';
 
-  var SCOREBOARD_RATIO = 0.18;
-
   var width = 0;
   var height = 0;
-  var tableWidth = 0; // ancho jugable: width menos la franja del marcador
+  var tableWidth = 0; // ancho jugable: width menos las pestañas del marcador
   var malletRadius = 0;
   var puckRadius = 0;
   var goalHalfWidth = 0;
   var maxPuckSpeed = 0;
+  var scoreFontSize = 0;
   var orientationBlocked = false;
 
   var puck = { x: 0, y: 0, vx: 0, vy: 0 };
@@ -105,15 +104,21 @@
     canvas.height = Math.round(height * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    // El marcador vive en una franja lateral fija a la derecha; el área
-    // jugable es el resto del ancho, no el canvas completo.
-    var scoreboardWidth = Math.min(width, height) * SCOREBOARD_RATIO;
-    tableWidth = width - scoreboardWidth;
+    // El margen que reserva la mesa a la derecha depende del tamaño de las
+    // pestañas del marcador, que a su vez se calculan a partir del disco:
+    // se calcula el disco primero, con el ancho completo como base (el
+    // margen es pequeño, no lo distorsiona), y de ahí sale el margen real.
+    var basis = Math.min(width, height);
+    malletRadius = basis * 0.085;
+    puckRadius = basis * 0.045;
+    maxPuckSpeed = basis * 1.6;
 
-    malletRadius = Math.min(tableWidth, height) * 0.085;
-    puckRadius = Math.min(tableWidth, height) * 0.045;
+    scoreFontSize = puckRadius * 1.5; // más pequeño que la bola (diámetro = 2·puckRadius)
+    var tabDepth = scoreFontSize * 1.3;
+    var tabMargin = scoreFontSize * 0.35;
+    tableWidth = width - tabDepth - tabMargin;
+
     goalHalfWidth = tableWidth * 0.17;
-    maxPuckSpeed = Math.min(tableWidth, height) * 1.6;
 
     if (oldTableWidth && oldHeight) {
       var sx = tableWidth / oldTableWidth;
@@ -350,32 +355,59 @@
   }
 
   /**
-   * Marcador en la franja lateral derecha (fuera de la mesa: no tapa nunca
-   * el disco). Los dígitos van rotados 90° en sentido horario para que se
-   * lean del derecho girando el móvil a horizontal con el lateral derecho
-   * hacia arriba, en vez de estar plantados en el centro de la mesa.
+   * Marcador minimalista: una pestaña con forma de trapecio por jugador,
+   * pegada al borde derecho de la mesa (no ocupa todo el alto de la
+   * pantalla). El dígito va más pequeño que la bola y rotado 90° en
+   * sentido horario, para leerse del derecho girando el móvil a horizontal
+   * con el lateral derecho hacia arriba.
    */
   function drawScoreboard() {
-    var stripWidth = width - tableWidth;
+    drawScoreTab('B', height * 0.24, 'rgba(255, 62, 165, 0.55)');
+    drawScoreTab('A', height * 0.76, 'rgba(34, 229, 255, 0.55)');
+  }
 
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-    ctx.fillRect(tableWidth, 0, stripWidth, height);
+  function drawScoreTab(id, centerY, accentColor) {
+    var outerH = scoreFontSize * 1.3; // lado largo, pegado a la mesa
+    var innerH = scoreFontSize * 0.8; // lado corto, extremo libre
+    var depth = scoreFontSize * 1.3; // cuánto sobresale hacia la derecha
+    var radius = scoreFontSize * 0.22;
+    var xBase = tableWidth;
+    var xTip = tableWidth + depth;
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.18)';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(tableWidth, 0);
-    ctx.lineTo(tableWidth, height);
+    var points = [
+      { x: xBase, y: centerY - outerH / 2 },
+      { x: xTip, y: centerY - innerH / 2 },
+      { x: xTip, y: centerY + innerH / 2 },
+      { x: xBase, y: centerY + outerH / 2 }
+    ];
+
+    roundedPolygonPath(points, radius);
+    ctx.fillStyle = 'rgba(15, 18, 28, 0.88)';
+    ctx.fill();
+    ctx.strokeStyle = accentColor;
+    ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    var centerX = tableWidth + stripWidth / 2;
-    ctx.font = '700 ' + stripWidth * 0.6 + 'px ' + fontFamily;
+    ctx.font = '700 ' + scoreFontSize + 'px ' + fontFamily;
     ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    drawRotatedText(String(score[id]), xBase + depth * 0.5, centerY);
+  }
 
-    drawRotatedText(String(score.B), centerX, height * 0.25);
-    drawRotatedText(String(score.A), centerX, height * 0.75);
+  /** Construye un polígono con las esquinas redondeadas (arcTo por vértice). */
+  function roundedPolygonPath(points, radius) {
+    var n = points.length;
+    var last = points[n - 1];
+    var first = points[0];
+    ctx.beginPath();
+    ctx.moveTo((first.x + last.x) / 2, (first.y + last.y) / 2);
+    for (var i = 0; i < n; i++) {
+      var curr = points[i];
+      var next = points[(i + 1) % n];
+      ctx.arcTo(curr.x, curr.y, next.x, next.y, radius);
+    }
+    ctx.closePath();
   }
 
   function drawRotatedText(text, x, y) {

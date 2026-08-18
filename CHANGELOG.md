@@ -3,6 +3,20 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [1.2] — Air Hockey: marcador minimalista
+
+### Cambiado
+- La franja lateral del marcador (v1.1) ocupaba todo el alto de la pantalla:
+  demasiado para lo que enseña. Cada marcador pasa a ser una **pestaña
+  pequeña** con forma de trapecio y esquinas redondeadas, pegada al borde
+  derecho de la mesa, con el borde teñido del color de cada jugador.
+- El dígito se dibuja más pequeño que la bola (antes tenía un tamaño
+  comparable al de la mesa completa) y sigue rotado 90° en sentido horario
+  para leerse girando el móvil a horizontal con el lateral derecho arriba.
+- El área jugable recupera casi todo el ancho: el margen reservado ahora
+  depende sólo del tamaño de la pestaña, no de un porcentaje fijo del lado
+  corto.
+
 ## [1.1] — Air Hockey: marcador lateral
 
 ### Cambiado
