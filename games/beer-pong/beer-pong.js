@@ -26,7 +26,7 @@
   var MAX_SWIPE_SPEED = 4500; // px/s → potencia 1
   var MAX_ANGLE = (65 * Math.PI) / 180; // más inclinado que esto: gesto cancelado
   var SAMPLE_WINDOW_MS = 80;
-  var LANDED_PAUSE_MS = 700;
+  var LANDED_PAUSE_MS = 450; // pausa antes de devolver la pelota al saque
 
   // --- Vasos con volumen (tronco de cono en perspectiva falsa) -------------
   var SQUASH = 0.78; // achatamiento vertical de las elipses: da la perspectiva
@@ -46,14 +46,24 @@
   // los tiros cortos quedaban tan rasos que se estrellaban contra la pared
   // del vaso más cercano en vez de sobrevolarlo. Se fija alto (unas 2-3
   // veces la altura del vaso más grande) y sólo sube un poco con la potencia.
-  var ARC_APEX_BASE = 0.22;
-  var ARC_APEX_POWER = 0.1;
+  // El tiro va bombeado a propósito: además de caer sobre los vasos desde
+  // arriba, deja al bote en la mesa altura de sobra para superar el borde de
+  // un vaso, que es lo que hace viables los tiros de bote.
+  var ARC_APEX_BASE = 0.4;
+  var ARC_APEX_POWER = 0.14;
 
   // --- Rebotes -------------------------------------------------------------
-  var RESTITUTION_TABLE = 0.5; // energía conservada al botar en la mesa
+  // Tras botar, la altura que recupera la pelota es RESTITUTION_TABLE² veces
+  // la que traía: con 0.58 conserva un tercio, más que la altura de un vaso,
+  // así que un bote bien medido puede entrar. Con 0.5 se quedaba en un cuarto
+  // y ningún bote llegaba a superar el borde.
+  var RESTITUTION_TABLE = 0.58;
   var RESTITUTION_CUP = 0.62; // ... y al chocar con el borde o la pared
-  var TABLE_FRICTION = 0.82; // pérdida horizontal en cada bote
-  var MAX_BOUNCES = 4; // tras esto la bola se amortigua y se detiene
+  var TABLE_FRICTION = 0.86; // pérdida horizontal en cada bote
+  // Tras esto la pelota se amortigua y se detiene. Con el arco bombeado el
+  // vuelo ya dura más de un segundo, y encadenar cuatro botes dejaba tiros
+  // de más de tres segundos: demasiado tiempo muerto entre lanzamientos.
+  var MAX_BOUNCES = 3;
 
   var accent =
     getComputedStyle(document.documentElement).getPropertyValue('--c-beer-pong').trim() ||
@@ -312,10 +322,12 @@
     vx: 0,
     vy: 0,
     vz: 0,
-    phase: 'idle', // 'idle' | 'flight' | 'sinking' | 'sunk' | 'settled'
+    // 'idle' | 'flight' | 'falling' | 'sinking' | 'sunk' | 'settled' | 'gone'
+    phase: 'idle',
     bounces: 0,
     sinkCup: null,
-    wasHit: false
+    wasHit: false,
+    enteredTable: false
   };
 
   function resetBall() {
@@ -329,6 +341,7 @@
     ball.bounces = 0;
     ball.sinkCup = null;
     ball.wasHit = false;
+    ball.enteredTable = false;
   }
 
   /**
@@ -501,7 +514,10 @@
     // estrecha de distancias: si el mínimo fuese mucho más corto, la banda
     // útil de potencia se comprimiría contra el máximo y el tiro sería
     // imposible de dosificar.
-    var rangeY = depth * (0.54 + 0.79 * power);
+    // Recalibrado para el arco bombeado: al caer más vertical, el punto por
+    // el que la pelota cruza la boca del vaso queda casi sobre el punto de
+    // caída, así que apuntar es más directo que con el arco raso anterior.
+    var rangeY = depth * (0.49 + 0.72 * power);
     var ratio = vx / -vy;
 
     // La altura del arco la fija ARC_APEX_*, no el alcance; el tiempo de
@@ -665,17 +681,32 @@
     DoubledAudio.beep(150 + ball.bounces * 25, 0.09, 'triangle');
   }
 
+  /**
+   * ¿Está la pelota sobre el tablero? El borde cercano no cuenta como salir:
+   * por delante de la mesa está el suelo del jugador, y además el saque
+   * arranca justo ahí (en la zona de swipe), así que tratarlo como vacío
+   * daría por caída cualquier lanzamiento en su primer paso.
+   */
+  function isOverTable(geo, x, y) {
+    if (y < geo.topY) return false;
+    if (y > geo.bottomY) return true;
+    var t = (y - geo.topY) / (geo.bottomY - geo.topY);
+    return Math.abs(x - width / 2) <= geo.halfWidthAt(t);
+  }
+
+  function startFalling() {
+    ball.phase = 'falling';
+    ball.sinkCup = null;
+    DoubledAudio.beep(120, 0.18, 'sine');
+  }
+
   function ballHasStopped(geo) {
     var basis = Math.min(width, height);
-    var wentFar = ball.y < geo.topY - ballRadius * 3;
-    var wentSide = ball.x < -ballRadius * 3 || ball.x > width + ballRadius * 3;
-    // Volver por delante sólo cuenta si ya ha botado en algo: la bola sale
-    // de la zona de swipe, que está por debajo del borde cercano de la mesa,
-    // así que sin esta condición todo lanzamiento se daría por terminado en
-    // su primer paso de simulación.
+    // Volver por delante sólo cuenta si ya ha botado en algo, por el mismo
+    // motivo que arriba: el saque está por debajo del borde cercano.
     var cameBack = ball.bounces > 0 && ball.y > geo.bottomY + ballRadius * 8;
     var atRest = ball.z <= 0.5 && ball.vz <= 0 && Math.hypot(ball.vx, ball.vy) < basis * 0.05;
-    return wentFar || wentSide || cameBack || atRest;
+    return cameBack || atRest;
   }
 
   /** Un paso de simulación de la bola en vuelo. */
@@ -693,9 +724,42 @@
 
     collideWithCupWalls();
 
+    var geo = tableGeometry();
+    if (isOverTable(geo, ball.x, ball.y)) {
+      ball.enteredTable = true;
+    } else if (ball.enteredTable) {
+      // Se ha pasado del fondo o de un lateral: ahí ya no hay mesa que la
+      // sostenga, así que cae al vacío en vez de quedarse flotando.
+      startFalling();
+      return;
+    }
+
     if (ball.z <= 0) bounceOnTable();
 
-    if (ballHasStopped(tableGeometry())) settleBall();
+    if (ballHasStopped(geo)) settleBall();
+  }
+
+  /** Profundidad de caída tras la que la pelota se da por perdida. */
+  function fallDepth() {
+    return Math.min(width, height) * 0.35;
+  }
+
+  /**
+   * Fuera de la mesa: cae sin nada que la frene. Se da por perdida al bajar
+   * `fallDepth()` por debajo del plano de la mesa, no al salir de la
+   * pantalla: quien se pasa del fondo se sale por arriba, y esperar a que
+   * cruzase todo el alto tardaría varios segundos.
+   */
+  function stepFallingBall(dt) {
+    ball.vz -= gravity * dt;
+    ball.x += ball.vx * dt;
+    ball.y += ball.vy * dt;
+    ball.z += ball.vz * dt;
+
+    if (ball.z < -fallDepth() || ball.y - ball.z > height + ballRadius * 6) {
+      ball.phase = 'gone';
+      ball.landedAt = performance.now();
+    }
   }
 
   /** La bola ya está dentro de un vaso: cae al fondo y se queda. */
@@ -797,9 +861,11 @@
 
     if (ball.phase === 'flight') {
       stepBall(dt);
+    } else if (ball.phase === 'falling') {
+      stepFallingBall(dt);
     } else if (ball.phase === 'sinking') {
       stepSinkingBall(dt);
-    } else if (ball.phase === 'settled' || ball.phase === 'sunk') {
+    } else if (ball.phase === 'settled' || ball.phase === 'sunk' || ball.phase === 'gone') {
       if (performance.now() - ball.landedAt > LANDED_PAUSE_MS) finishShot();
     }
   }
@@ -859,7 +925,6 @@
     ctx.stroke();
 
     drawScene();
-    drawAimPreview();
   }
 
   /**
@@ -974,42 +1039,15 @@
     ctx.restore();
   }
 
-  function drawAimPreview() {
-    if (!drag || ball.phase !== 'idle') return;
-    var v = computeSwipeVelocity(drag.samples);
-    if (!v) return;
-
-    var speed = Math.hypot(v.vx, v.vy);
-    var valid = isValidDirection(v.vx, v.vy);
-    var power = clamp((speed - MIN_SWIPE_SPEED) / (MAX_SWIPE_SPEED - MIN_SWIPE_SPEED), 0, 1);
-
-    ctx.save();
-    ctx.strokeStyle = valid ? accent : 'rgba(255, 255, 255, 0.3)';
-    ctx.lineWidth = 3;
-    ctx.setLineDash([6, 8]);
-    ctx.beginPath();
-    ctx.moveTo(ball.x, ball.y);
-    var previewLen = Math.min(width, height) * (0.15 + 0.35 * power);
-    var norm = speed > 0 ? previewLen / speed : 0;
-    ctx.lineTo(ball.x + v.vx * norm, ball.y + v.vy * norm);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    // Anillo de potencia alrededor de la bola.
-    ctx.beginPath();
-    ctx.arc(ball.x, ball.y, ballRadius * 1.8, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * power);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = valid ? accent : 'rgba(255, 255, 255, 0.3)';
-    ctx.stroke();
-    ctx.restore();
-  }
-
   function drawBall() {
+    if (ball.phase === 'gone') return; // se ha caído fuera de la mesa
+
     var basis = Math.min(width, height);
     var shadowScale = 1 - Math.min(ball.z / (basis * 0.5), 0.6);
 
-    // Dentro de un vaso no hay sombra que proyectar sobre la mesa.
-    if (!ball.sinkCup) {
+    // Ni dentro de un vaso ni cayéndose al vacío hay suelo que reciba la
+    // sombra: quitarla es lo que hace legible que la pelota se ha salido.
+    if (!ball.sinkCup && ball.phase !== 'falling') {
       ctx.beginPath();
       ctx.ellipse(
         ball.x,
@@ -1025,6 +1063,12 @@
     }
 
     var screenY = ball.y - ball.z;
+    ctx.save();
+    // Al caerse de la mesa se va apagando conforme baja, para que se lea
+    // como que se pierde de vista y no como que atraviesa el fondo.
+    if (ball.phase === 'falling') {
+      ctx.globalAlpha = clamp(1 + ball.z / fallDepth(), 0, 1);
+    }
     ctx.beginPath();
     ctx.arc(ball.x, screenY, ballRadius, 0, Math.PI * 2);
     var gradient = ctx.createRadialGradient(
@@ -1042,6 +1086,7 @@
     ctx.lineWidth = 1;
     ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
     ctx.stroke();
+    ctx.restore();
   }
 
   /* -------------------------------------------------------- orientación */

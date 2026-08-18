@@ -90,8 +90,9 @@ turno y turno.
     total: así un gesto lento y largo no equivale a un flick corto y rápido.
   - Gesto hacia abajo o casi horizontal → lanzamiento **cancelado**, sin gastar
     tiro.
-- **Previsualización**: mientras se arrastra se dibuja una guía punteada con el
-  arco estimado y un indicador de potencia. Se retira al soltar.
+- **Sin ayudas visuales de apuntado**: no hay guía del arco ni indicador de
+  potencia. El tiro se calibra a ojo y con la mano, como en una mesa de
+  verdad; dibujarlo delataba la trayectoria y le quitaba toda la gracia.
 - Umbrales: menos de 24 px de recorrido = toque accidental, se ignora.
 - **Feedback:** vibración al soltar, sonido de acierto (vaso) distinto del de
   fallo (mesa), y animación del vaso al retirarse.
@@ -123,10 +124,19 @@ turno y turno.
   final: reflejar directamente en pantalla desviaría la pelota en un ángulo
   equivocado, porque los vasos se dibujan como elipses, no como círculos.
 - **Altura del arco desacoplada del alcance.** El gesto controla la distancia,
-  pero la cúspide se fija alta (unas 2-3 veces la altura del vaso más grande) y
-  sólo sube ligeramente con la potencia. Acoplarlas dejaba los tiros cortos tan
-  rasos que se estrellaban contra la pared del vaso más cercano en vez de
-  sobrevolarlo, haciendo imposible encestar en las filas de delante.
+  pero la cúspide se fija alta —unas cuatro o cinco veces la altura de un
+  vaso— y sólo sube ligeramente con la potencia. Acoplarlas dejaba los tiros
+  tan rasos que se estrellaban contra la pared del vaso más cercano en vez de
+  sobrevolarlo. El tiro va deliberadamente **bombeado**: cae sobre los vasos
+  casi en vertical (apuntar es directo, el punto de caída y el de entrada
+  casi coinciden) y, sobre todo, deja al bote en la mesa altura de sobra para
+  superar el borde de un vaso. Con la altura que conserva un rebote
+  (`RESTITUTION_TABLE²`, un tercio de la que traía), **un bote bien medido
+  puede entrar**; con un arco raso ningún bote llegaba al borde.
+- **Salirse de la mesa se penaliza sola.** Si la pelota se pasa del fondo o de
+  un lateral no queda flotando: entra en caída libre, se apaga conforme baja y
+  desaparece. El borde cercano no cuenta como salir —por delante está el suelo
+  del jugador, y además el saque arranca justo ahí—.
 - Un vaso ya acertado sigue siendo un **obstáculo sólido** hasta que el turno se
   cierra y se retira: se dibuja atenuado, estorba como cualquier otro y la
   pelota rebota en su boca, pero no vuelve a puntuar. Todo lo que se ve en la

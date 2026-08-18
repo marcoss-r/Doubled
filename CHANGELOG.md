@@ -3,6 +3,40 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [2.3] — Beer Pong: tiro bombeado, sin ayudas de apuntado, caída fuera de mesa
+
+### Eliminado
+- La guía punteada del arco y el anillo de potencia alrededor de la pelota.
+  El tiro se calibra a ojo, como en una mesa de verdad.
+
+### Cambiado
+- **Tiro mucho más bombeado**: la cúspide del arco sube de 84-116 px a
+  163-196 px (cuatro o cinco veces la altura de un vaso). Además de caer
+  sobre los vasos casi en vertical, es lo que hace viables los tiros de bote.
+- **Rebote en la mesa más vivo** (restitución 0.50 → 0.58, rozamiento
+  0.82 → 0.86). La altura que recupera la pelota tras botar va con el
+  cuadrado de la restitución: con 0.50 se quedaba en un cuarto de la que
+  traía, siempre por debajo del borde de un vaso, así que **ningún bote podía
+  entrar**. Con 0.58 conserva un tercio, más que la altura del vaso.
+  Verificado: un tiro de 1500 px/s bota (picos 163 → 53, con los vasos a 37
+  de alto) y entra.
+- Alcance recalibrado a `depth · (0.49 + 0.72·potencia)` para el arco nuevo.
+- **La pelota que se sale de la mesa se cae**: por el fondo o por un lateral
+  entra en caída libre, se apaga conforme baja y desaparece, en vez de
+  quedarse posada en el vacío. El borde cercano no cuenta como salir (por
+  delante está el suelo del jugador, y el saque arranca justo ahí).
+- Tiros más ágiles: máximo de botes 4 → 3 y pausa antes de devolver la pelota
+  700 → 450 ms. Con el arco bombeado, un fallo tardaba más de tres segundos
+  en resolverse y se notaba como tiempo muerto entre lanzamientos.
+
+Validado en Chromium headless reconstruyendo la altura de la pelota frame a
+frame: cúspides y picos de rebote medidos arriba; el barrido de potencias
+encesta en varias filas (1600, 2000, 3600, 4000, 4400 px/s), incluida una
+entrada tras bote; una prueba aislada confirma que un tiro largo deja de
+dibujarse tras caerse y que uno que encesta no. Repasados turnos —incluido
+el *balls back*, que ahora se concede más a menudo al subir la tasa de
+acierto—, marcador (10 → 9 al cerrar turno), hub, mute y offline.
+
 ## [2.2] — Beer Pong: formación compacta al fondo, más mesa para botar
 
 ### Cambiado
