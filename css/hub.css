@@ -1,0 +1,239 @@
+/* ==========================================================================
+   Doubled — hub.css
+   Menú de selección de juego (index.html). Requiere base.css.
+   ========================================================================== */
+
+body {
+  background-image:
+    radial-gradient(120% 60% at 12% -10%, rgba(34, 229, 255, 0.16), transparent 60%),
+    radial-gradient(120% 60% at 88% 0%, rgba(255, 62, 165, 0.14), transparent 62%);
+}
+
+.hub {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  max-width: 42rem;
+  margin-inline: auto;
+  padding-inline: var(--sp-4);
+  padding-block: var(--sp-5) var(--sp-4);
+}
+
+/* --------------------------------------------------------------------------
+   Cabecera
+   -------------------------------------------------------------------------- */
+
+.hub__header {
+  text-align: center;
+  padding-block: var(--sp-5) var(--sp-6);
+}
+
+.hub__logo {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.hub__logo-mark {
+  position: relative;
+  width: 2.75rem;
+  height: 1.75rem;
+}
+
+.hub__logo-mark span {
+  position: absolute;
+  top: 0;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  mix-blend-mode: screen;
+}
+
+.hub__logo-mark span:first-child {
+  left: 0;
+  background: var(--c-accent);
+  box-shadow: 0 0 18px rgba(34, 229, 255, 0.6);
+}
+
+.hub__logo-mark span:last-child {
+  right: 0;
+  background: var(--c-accent-2);
+  box-shadow: 0 0 18px rgba(255, 62, 165, 0.55);
+}
+
+.hub__title {
+  font-size: var(--fs-3xl);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.hub__tagline {
+  margin-top: var(--sp-3);
+  color: var(--c-text-dim);
+  font-size: var(--fs-sm);
+  text-wrap: balance;
+}
+
+/* --------------------------------------------------------------------------
+   Rejilla de juegos
+   -------------------------------------------------------------------------- */
+
+.hub__games {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--sp-4);
+  flex: 1;
+  align-content: start;
+}
+
+@media (min-width: 34rem) {
+  .hub__games {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.game-card {
+  --card-accent: var(--c-accent);
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-height: max(var(--tap-min), 5.5rem);
+  padding: var(--sp-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-lg);
+  background:
+    linear-gradient(180deg, var(--c-surface), var(--c-bg-elev));
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+  transition:
+    transform var(--dur-fast) ease,
+    border-color var(--dur-base) ease;
+}
+
+/* Filo de color por juego. */
+.game-card::before {
+  content: '';
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: 4px;
+  background: var(--card-accent);
+  box-shadow: 0 0 18px 1px var(--card-accent);
+}
+
+.game-card[data-game='air-hockey'] {
+  --card-accent: var(--c-air-hockey);
+}
+.game-card[data-game='beer-pong'] {
+  --card-accent: var(--c-beer-pong);
+}
+.game-card[data-game='pong'] {
+  --card-accent: var(--c-pong);
+}
+.game-card[data-game='battleship'] {
+  --card-accent: var(--c-battleship);
+}
+
+.game-card--ready:active {
+  transform: scale(0.985);
+}
+
+.game-card--ready:hover {
+  border-color: var(--c-border-strong);
+}
+
+.game-card--soon {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.game-card__icon {
+  flex: 0 0 auto;
+  width: 3rem;
+  height: 3rem;
+  display: grid;
+  place-items: center;
+  border-radius: var(--radius-md);
+  background: var(--c-surface-2);
+  color: var(--card-accent);
+}
+
+.game-card__icon svg {
+  width: 1.75rem;
+  height: 1.75rem;
+}
+
+.game-card__body {
+  min-width: 0;
+}
+
+/* Enlace que cubre la tarjeta entera (lo inyecta app.js en los juegos ya
+   disponibles). Va por encima del contenido pero por debajo del badge. */
+.game-card__link {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.game-card__name {
+  font-size: var(--fs-lg);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.game-card__desc {
+  margin-top: var(--sp-1);
+  color: var(--c-text-muted);
+  font-size: var(--fs-sm);
+}
+
+.game-card__badge {
+  position: absolute;
+  top: var(--sp-3);
+  inset-inline-end: var(--sp-3);
+  padding: 0.15rem var(--sp-2);
+  border-radius: var(--radius-pill);
+  background: var(--c-surface-2);
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+/* --------------------------------------------------------------------------
+   Aviso de estado (offline / nueva versión)
+   -------------------------------------------------------------------------- */
+
+.hub__notice {
+  margin-top: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius-md);
+  background: var(--c-surface);
+  color: var(--c-text-dim);
+  font-size: var(--fs-sm);
+  text-align: center;
+}
+
+.hub__notice[hidden] {
+  display: none;
+}
+
+/* --------------------------------------------------------------------------
+   Pie
+   -------------------------------------------------------------------------- */
+
+.hub__footer {
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-4);
+  border-top: 1px solid var(--c-border);
+  display: flex;
+  justify-content: center;
+  gap: var(--sp-2);
+  color: var(--c-text-muted);
+  font-size: var(--fs-xs);
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+}
