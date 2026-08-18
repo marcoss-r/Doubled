@@ -393,8 +393,12 @@
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    var textX = xBase + scoreTabDepth * 0.5;
-    var offset = scoreFontSize * 0.5 + gap / 2;
+    // Un poco desplazado hacia el lateral izquierdo de la pestaña (el
+    // opuesto al borde de la pantalla), no al centro de esta mitad.
+    var textX = xBase + scoreTabDepth * 0.38;
+    // Un poco más cerca del centro de la pantalla que la mitad exacta de
+    // cada hueco de la pestaña (era demasiada separación entre B y A).
+    var offset = (scoreFontSize * 0.5 + gap / 2) * 0.75;
 
     ctx.fillStyle = MALLET_COLOR.B;
     drawRotatedText(String(score.B), textX, centerY - offset);

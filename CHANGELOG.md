@@ -3,6 +3,16 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [1.4] — Air Hockey: ajuste fino de la posición de los dígitos
+
+### Cambiado
+- Los dos dígitos de la pestaña se acercan un poco entre sí (hacia el centro
+  de la pantalla, reduciendo el hueco que los separaba de B a A) y se
+  desplazan levemente hacia el lateral izquierdo de la pestaña (el lado
+  pegado a la mesa, opuesto al borde de la pantalla), en vez de quedar
+  centrados en la mitad exacta de cada hueco. Ajuste puramente visual, sin
+  cambios en la forma de la pestaña ni en la lógica del marcador.
+
 ## [1.3] — Air Hockey: una pestaña centrada, dígitos del color del mallet
 
 ### Cambiado
