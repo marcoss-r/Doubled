@@ -3,6 +3,37 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [1.8] — Beer Pong: turnos, traspaso, marcador y balls back
+
+### Añadido
+- `js/shared/handover.js` + `css/handover.css`: pantalla de traspaso del
+  móvil compartida ("Pasa el móvil a X · Toca cuando estés listo"),
+  inyectada dinámicamente, sin marcado previo necesario en cada página.
+  Reutilizable por Hundir la flota (Fase 4).
+- Dos jugadores independientes, cada uno con su propia formación de 10
+  vasos. El turno alterna entre ellos; quien tira ve siempre los vasos del
+  rival, nunca los suyos propios.
+- Turno = 2 lanzamientos. Los vasos acertados quedan marcados (atenuados,
+  no desaparecen todavía) hasta cerrar el turno completo, momento en el que
+  se retiran de golpe (con la animación del hito 1.7) y se comprueba la
+  reagrupación.
+- *Balls back*: si los dos primeros lanzamientos del turno aciertan, se
+  concede un tercer tiro extra, una sola vez por turno.
+- HUD superior con el turno actual y los vasos restantes del rival
+  (`#hud-status`).
+- La entrada táctil se bloquea por completo durante el traspaso (la
+  pantalla opaca cubre el canvas, más una comprobación explícita del
+  estado del turno como defensa adicional).
+
+Validado en Chromium headless: el traspaso bloquea el primer intento de
+swipe; tras 2 tiros el turno cambia y el HUD/título del traspaso reflejan
+al segundo jugador; dos aciertos seguidos conceden el tiro bonus (el
+traspaso no aparece hasta resolver ese tercer tiro); los vasos acertados
+se ven atenuados mientras el turno sigue abierto. Sin errores de consola.
+
+Sin redención, muerte súbita ni pantalla de fin de partida todavía
+(hito 1.9): si un jugador llega a 0 vasos, la partida sigue sin más.
+
 ## [1.7] — Beer Pong: detección de acierto, retirada y reagrupación
 
 ### Añadido

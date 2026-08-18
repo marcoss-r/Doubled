@@ -37,6 +37,17 @@
   line-height: 1;
 }
 
+.bp-hud__status {
+  pointer-events: none;
+  padding: 0.35rem var(--sp-3);
+  border-radius: var(--radius-pill);
+  background: rgba(20, 24, 38, 0.72);
+  border: 1px solid var(--c-border);
+  color: var(--c-text);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
 .bp-hud__right {
   display: flex;
   gap: var(--sp-2);

@@ -1,0 +1,52 @@
+/* ==========================================================================
+   Doubled — pantalla de traspaso del móvil (handover).
+   Componente compartido: lo inyecta js/shared/handover.js en cualquier
+   juego por turnos (Beer Pong, Hundir la flota). Requiere css/base.css.
+   ========================================================================== */
+
+.handover {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-6);
+  background: var(--c-bg);
+  text-align: center;
+}
+
+.handover[hidden] {
+  display: none;
+}
+
+.handover__content {
+  max-width: 22rem;
+}
+
+.handover__title {
+  font-size: var(--fs-2xl);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.handover__subtitle {
+  margin-top: var(--sp-3);
+  color: var(--c-text-dim);
+}
+
+.handover__btn {
+  margin-top: var(--sp-6);
+  min-height: var(--tap-min);
+  min-width: 12rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding-inline: var(--sp-5);
+  border-radius: var(--radius-md);
+  background: var(--c-accent);
+  color: #04141c;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

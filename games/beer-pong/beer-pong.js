@@ -1,9 +1,7 @@
 /**
  * Beer Pong — Doubled.
- * Fase 2, hito 1.6: gesto de swipe con previsualización y física de
- * parábola. La pelota vuela y aterriza, pero todavía sin detectar
- * aciertos contra los vasos (llega en el hito 1.7): tras aterrizar,
- * simplemente vuelve a la posición de saque.
+ * Fase 2, hito 1.8: turnos, pantalla de traspaso, marcador y balls back.
+ * Redención, muerte súbita y gameover llegan en el hito 1.9.
  */
 (function () {
   'use strict';
@@ -12,6 +10,8 @@
   var canvas = document.getElementById('table');
   var ctx = canvas.getContext('2d');
   var rotateWarning = document.getElementById('rotate-warning');
+  var hudStatus = document.getElementById('hud-status');
+  var handover = DoubledHandover.create();
 
   var MAX_DPR = 3;
   var STEP = 1 / 120;
@@ -67,8 +67,27 @@
   var REGROUP_SIZES = [10, 6, 3, 1];
   var CUP_ACCEPT_RATIO = 1.15; // radio de acierto: +15% sobre el vaso dibujado
   var CUP_REMOVE_ANIM_MS = 260;
+  var TURN_SHOTS = 2;
 
-  var rival = { cups: buildFormation(10, 10), rowCount: 4, cupsRemaining: 10 };
+  function newPlayer(name) {
+    return { name: name, cups: buildFormation(10, 10), rowCount: 4, cupsRemaining: 10 };
+  }
+
+  var players = { A: newPlayer('Jugador 1'), B: newPlayer('Jugador 2') };
+  var currentPlayer = 'A'; // quien tira ahora
+  var shotsThisTurn = 0;
+  var turnHits = 0;
+  var ballBackGranted = false;
+  var turnShotsLimit = TURN_SHOTS;
+  var turnPhase = 'handover'; // 'handover' | 'playing'
+
+  function opponentOf(id) {
+    return id === 'A' ? 'B' : 'A';
+  }
+
+  function targetPlayer() {
+    return players[opponentOf(currentPlayer)];
+  }
 
   /**
    * Reagrupa a la formación estándar más pequeña en la que quepan todos los
@@ -89,12 +108,30 @@
     }
   }
 
+  /**
+   * Retira los vasos marcados como acertados durante el turno que acaba de
+   * terminar. Se hace de golpe al cerrar el turno (no tiro a tiro): así el
+   * jugador ve durante todo su turno cuáles ya ha tocado (atenuados en
+   * drawCups) sin que la formación cambie a mitad de turno.
+   */
+  function retirePendingHits(player) {
+    var now = performance.now();
+    player.cups.forEach(function (cup) {
+      if (!cup.pendingHit) return;
+      cup.pendingHit = false;
+      cup.alive = false;
+      cup.removedAt = now;
+      player.cupsRemaining--;
+    });
+    maybeRegroup(player);
+  }
+
   function findHitCup(x, y, geo, player) {
     var positions = cupPositions(player.cups, player.rowCount, geo);
     var best = null;
     var bestDist = Infinity;
     positions.forEach(function (pos) {
-      if (!pos.cup.alive) return;
+      if (!pos.cup.alive || pos.cup.pendingHit) return;
       var dist = Math.hypot(pos.x - x, pos.y - y);
       if (dist <= pos.r * CUP_ACCEPT_RATIO && dist < bestDist) {
         bestDist = dist;
@@ -174,6 +211,52 @@
     ball.y = ballRest.y;
     ball.z = 0;
     ball.bounced = false;
+    ball.wasHit = false;
+  }
+
+  /**
+   * Se llama cuando la bola vuelve a quedar en reposo tras un lanzamiento
+   * (acierto o fallo): cuenta el tiro, concede el balls back si toca, y
+   * cierra el turno si ya no quedan tiros.
+   */
+  function finishShot() {
+    var wasHit = ball.wasHit;
+    resetBall();
+
+    shotsThisTurn++;
+    if (wasHit) turnHits++;
+
+    if (turnHits === 2 && shotsThisTurn === 2 && !ballBackGranted) {
+      ballBackGranted = true;
+      turnShotsLimit = TURN_SHOTS + 1;
+    }
+
+    refreshHud();
+
+    if (shotsThisTurn >= turnShotsLimit) endTurn();
+  }
+
+  function endTurn() {
+    var target = targetPlayer(); // capturado antes de cambiar de jugador
+    retirePendingHits(target);
+
+    currentPlayer = opponentOf(currentPlayer);
+    shotsThisTurn = 0;
+    turnHits = 0;
+    ballBackGranted = false;
+    turnShotsLimit = TURN_SHOTS;
+    turnPhase = 'handover';
+
+    handover.show('Pasa el móvil a ' + players[currentPlayer].name, function () {
+      turnPhase = 'playing';
+    });
+    refreshHud();
+  }
+
+  function refreshHud() {
+    if (!hudStatus) return;
+    hudStatus.textContent =
+      'Turno de ' + players[currentPlayer].name + ' · quedan ' + targetPlayer().cupsRemaining;
   }
 
   function launchBall(vx, vy, speed) {
@@ -213,13 +296,11 @@
    */
   function handleLanding() {
     var geo = tableGeometry();
-    var hit = findHitCup(ball.x, ball.y, geo, rival);
+    var hit = findHitCup(ball.x, ball.y, geo, targetPlayer());
 
     if (hit) {
-      hit.cup.alive = false;
-      hit.cup.removedAt = performance.now();
-      rival.cupsRemaining--;
-      maybeRegroup(rival);
+      hit.cup.pendingHit = true;
+      ball.wasHit = true;
       ball.x = hit.x;
       ball.y = hit.y;
       ball.phase = 'sunk';
@@ -273,7 +354,7 @@
   }
 
   canvas.addEventListener('pointerdown', function (event) {
-    if (activePointerId !== null || ball.phase !== 'idle') return; // un solo puntero, sin lanzar en pleno vuelo
+    if (activePointerId !== null || ball.phase !== 'idle' || turnPhase !== 'playing') return;
     var pos = pointFromEvent(event);
     var geo = tableGeometry();
     if (pos.y < geo.bottomY) return; // el gesto arranca en la zona de swipe
@@ -333,7 +414,7 @@
 
       if (ball.flightElapsed >= ball.flightDuration) handleLanding();
     } else if (ball.phase === 'landed' || ball.phase === 'sunk') {
-      if (performance.now() - ball.landedAt > LANDED_PAUSE_MS) resetBall();
+      if (performance.now() - ball.landedAt > LANDED_PAUSE_MS) finishShot();
     }
   }
 
@@ -385,22 +466,28 @@
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    drawCups(geo);
+    drawCups(geo, targetPlayer());
     drawAimPreview();
     drawBall();
   }
 
-  function drawCups(geo) {
-    var positions = cupPositions(rival.cups, rival.rowCount, geo);
+  function drawCups(geo, player) {
+    var positions = cupPositions(player.cups, player.rowCount, geo);
     var now = performance.now();
 
     positions.forEach(function (pos) {
-      if (pos.cup.alive) {
+      if (pos.cup.alive && !pos.cup.pendingHit) {
         drawCup(pos.x, pos.y, pos.r, 1);
         return;
       }
+      // Ya tocado este turno, pendiente de retirarse al cerrarlo: se
+      // atenúa para que se vea cuáles ya se han acertado.
+      if (pos.cup.alive && pos.cup.pendingHit) {
+        drawCup(pos.x, pos.y, pos.r, 0.4);
+        return;
+      }
       // Animación de retirada: encoge y se desvanece durante
-      // CUP_REMOVE_ANIM_MS tras el acierto; luego deja de dibujarse.
+      // CUP_REMOVE_ANIM_MS tras cerrar el turno; luego deja de dibujarse.
       if (!pos.cup.removedAt) return;
       var elapsed = now - pos.cup.removedAt;
       if (elapsed >= CUP_REMOVE_ANIM_MS) return;
@@ -514,6 +601,11 @@
   checkOrientation();
   resize();
   DoubledRegisterSW('../../service-worker.js');
+
+  refreshHud();
+  handover.show('Pasa el móvil a ' + players[currentPlayer].name, function () {
+    turnPhase = 'playing';
+  });
 
   var loop = DoubledLoop.createFixedLoop({ step: STEP, update: update, render: render });
   loop.start();
