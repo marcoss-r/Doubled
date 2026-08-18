@@ -3,6 +3,19 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [1.3] — Air Hockey: una pestaña centrada, dígitos del color del mallet
+
+### Cambiado
+- Las dos pestañas separadas (v1.2) se unifican en **una sola pestaña**
+  centrada en el lateral derecho, a la altura de la línea media, con los dos
+  marcadores apilados dentro (B arriba, A abajo).
+- Cada dígito se pinta del **color de su propio mallet** (magenta B, cian A)
+  en vez de blanco neutro; el borde de la pestaña pasa a ser neutro, ya que
+  el color ahora lo llevan los números.
+- Tamaño de fuente reducido (de `puckRadius * 1.5` a `puckRadius * 1.15`):
+  los números quedan más pequeños que antes, siempre por debajo del tamaño
+  de la bola.
+
 ## [1.2] — Air Hockey: marcador minimalista
 
 ### Cambiado

@@ -45,27 +45,29 @@ render, entrada multitáctil, colisiones), que Pong reutilizará en Fase 3.
 
   ```
   ┌──────────────────────┐  ← borde superior = fondo del jugador B
-  │  portería B        ⟨B│  ← pestaña de marcador de B (pequeña)
-  │                      │
-  │   mitad de B         │
-  ├──── línea central ───┤
-  │   mitad de A         │
-  │                      │
-  │  portería A        ⟨A│  ← pestaña de marcador de A (pequeña)
+  │  portería B           │
+  │                       │
+  │   mitad de B          │
+  ├──── línea central ──⟨B│  ← pestaña única de marcador (pequeña),
+  │   mitad de A        ⟨A│    centrada en la línea media
+  │                       │
+  │  portería A           │
   └──────────────────────┘  ← borde inferior = fondo del jugador A
   ```
 
-- **Marcador minimalista, no en el centro:** un marcador plantado sobre la
-  línea de medio campo queda tapado por el disco y los malletes en cuanto hay
-  partida en marcha (detectado al jugar de verdad, no en el diseño sobre el
-  papel); una franja lateral a todo el alto también resultó excesiva. La
-  solución final es una **pestaña pequeña por jugador**, con forma de
-  trapecio y esquinas redondeadas, pegada al borde derecho de la mesa —no
-  ocupa todo el alto de la pantalla—, con el borde de la pestaña teñido del
-  color de cada jugador (magenta B, cian A). El dígito va **más pequeño que
-  la bola** y rotado 90° en sentido horario (`ctx.rotate(Math.PI/2)`), para
-  leerse del derecho girando el móvil a horizontal con el lateral derecho
-  hacia arriba.
+- **Marcador minimalista, no en el centro de la mesa:** un marcador plantado
+  sobre la línea de medio campo queda tapado por el disco y los malletes en
+  cuanto hay partida en marcha (detectado al jugar de verdad, no en el diseño
+  sobre el papel); una franja lateral a todo el alto también resultó
+  excesiva, y dos pestañas separadas tampoco eran lo buscado. La solución
+  final es **una única pestaña** con forma de trapecio y esquinas
+  redondeadas, centrada en el lateral derecho de la mesa (a la altura de la
+  línea media) —no ocupa nada del alto de la pantalla más allá de lo
+  imprescindible—, con los dos dígitos apilados dentro (B arriba, A abajo),
+  cada uno **del color de su propio mallet** (magenta B, cian A) en vez de
+  blanco neutro. El dígito va más pequeño que la bola y rotado 90° en sentido
+  horario (`ctx.rotate(Math.PI/2)`), para leerse del derecho girando el móvil
+  a horizontal con el lateral derecho hacia arriba.
 - La mesa se dibuja en un único `<canvas>` a resolución de dispositivo
   (`devicePixelRatio`, con tope de 3 para no penalizar el rendimiento en
   pantallas grandes). La UI no jugable (botón de pausa, avisos) va en DOM sobre

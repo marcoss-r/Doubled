@@ -35,6 +35,9 @@
     getComputedStyle(document.documentElement).getPropertyValue('--font-display').trim() ||
     'system-ui, sans-serif';
 
+  // Color de cada mallet, reutilizado también por el dígito de su marcador.
+  var MALLET_COLOR = { A: 'rgba(34, 229, 255, 0.85)', B: 'rgba(255, 62, 165, 0.85)' };
+
   var width = 0;
   var height = 0;
   var tableWidth = 0; // ancho jugable: width menos las pestañas del marcador
@@ -43,6 +46,7 @@
   var goalHalfWidth = 0;
   var maxPuckSpeed = 0;
   var scoreFontSize = 0;
+  var scoreTabDepth = 0;
   var orientationBlocked = false;
 
   var puck = { x: 0, y: 0, vx: 0, vy: 0 };
@@ -113,10 +117,10 @@
     puckRadius = basis * 0.045;
     maxPuckSpeed = basis * 1.6;
 
-    scoreFontSize = puckRadius * 1.5; // más pequeño que la bola (diámetro = 2·puckRadius)
-    var tabDepth = scoreFontSize * 1.3;
-    var tabMargin = scoreFontSize * 0.35;
-    tableWidth = width - tabDepth - tabMargin;
+    scoreFontSize = puckRadius * 1.15; // más pequeño que la bola (diámetro = 2·puckRadius)
+    scoreTabDepth = scoreFontSize * 1.35;
+    var tabMargin = scoreFontSize * 0.4;
+    tableWidth = width - scoreTabDepth - tabMargin;
 
     goalHalfWidth = tableWidth * 0.17;
 
@@ -332,8 +336,8 @@
     drawScoreboard();
     if (phase === 'countdown') drawCountdown();
 
-    drawMallet('B', 'rgba(255, 62, 165, 0.85)');
-    drawMallet('A', 'rgba(34, 229, 255, 0.85)');
+    drawMallet('B', MALLET_COLOR.B);
+    drawMallet('A', MALLET_COLOR.A);
 
     ctx.beginPath();
     ctx.arc(puck.x, puck.y, puckRadius, 0, Math.PI * 2);
@@ -355,24 +359,21 @@
   }
 
   /**
-   * Marcador minimalista: una pestaña con forma de trapecio por jugador,
-   * pegada al borde derecho de la mesa (no ocupa todo el alto de la
-   * pantalla). El dígito va más pequeño que la bola y rotado 90° en
-   * sentido horario, para leerse del derecho girando el móvil a horizontal
-   * con el lateral derecho hacia arriba.
+   * Marcador minimalista: una única pestaña con forma de trapecio y
+   * esquinas redondeadas, centrada en el lateral derecho de la mesa (no
+   * ocupa todo el alto de la pantalla). Dentro van los dos dígitos
+   * apilados —B arriba, A abajo—, cada uno del color de su mallet. Van
+   * rotados 90° en sentido horario, para leerse del derecho girando el
+   * móvil a horizontal con el lateral derecho hacia arriba.
    */
   function drawScoreboard() {
-    drawScoreTab('B', height * 0.24, 'rgba(255, 62, 165, 0.55)');
-    drawScoreTab('A', height * 0.76, 'rgba(34, 229, 255, 0.55)');
-  }
-
-  function drawScoreTab(id, centerY, accentColor) {
-    var outerH = scoreFontSize * 1.3; // lado largo, pegado a la mesa
-    var innerH = scoreFontSize * 0.8; // lado corto, extremo libre
-    var depth = scoreFontSize * 1.3; // cuánto sobresale hacia la derecha
+    var centerY = height / 2;
+    var gap = scoreFontSize * 0.35;
+    var outerH = scoreFontSize * 2.5 + gap; // lado largo, pegado a la mesa
+    var innerH = outerH * 0.62; // lado corto, extremo libre
     var radius = scoreFontSize * 0.22;
     var xBase = tableWidth;
-    var xTip = tableWidth + depth;
+    var xTip = tableWidth + scoreTabDepth;
 
     var points = [
       { x: xBase, y: centerY - outerH / 2 },
@@ -384,15 +385,22 @@
     roundedPolygonPath(points, radius);
     ctx.fillStyle = 'rgba(15, 18, 28, 0.88)';
     ctx.fill();
-    ctx.strokeStyle = accentColor;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
     ctx.font = '700 ' + scoreFontSize + 'px ' + fontFamily;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    drawRotatedText(String(score[id]), xBase + depth * 0.5, centerY);
+
+    var textX = xBase + scoreTabDepth * 0.5;
+    var offset = scoreFontSize * 0.5 + gap / 2;
+
+    ctx.fillStyle = MALLET_COLOR.B;
+    drawRotatedText(String(score.B), textX, centerY - offset);
+
+    ctx.fillStyle = MALLET_COLOR.A;
+    drawRotatedText(String(score.A), textX, centerY + offset);
   }
 
   /** Construye un polígono con las esquinas redondeadas (arcTo por vértice). */
