@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Doubled — Minijuegos para dos en un móvil</title>
+    <meta
+      name="description"
+      content="Colección de minijuegos para dos personas compartiendo un solo móvil."
+    />
+
+    <!-- PWA -->
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <meta name="theme-color" content="#07080d" />
+
+    <!-- iOS: instalación en pantalla de inicio -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Doubled" />
+    <link rel="apple-touch-icon" href="./assets/icons/apple-touch-icon-180.png" />
+    <link rel="icon" href="./assets/icons/icon-192.png" sizes="192x192" type="image/png" />
+    <link rel="icon" href="./assets/icons/icon-512.png" sizes="512x512" type="image/png" />
+
+    <link rel="stylesheet" href="./css/base.css" />
+    <link rel="stylesheet" href="./css/hub.css" />
+  </head>
+  <body>
+    <main class="hub safe-area">
+      <header class="hub__header">
+        <div class="hub__logo">
+          <span class="hub__logo-mark" aria-hidden="true"><span></span><span></span></span>
+          <h1 class="hub__title">Doubled</h1>
+        </div>
+        <p class="hub__tagline">
+          Minijuegos para dos personas compartiendo un solo móvil.
+          Elegid uno y colocad el teléfono entre los dos.
+        </p>
+      </header>
+
+      <nav class="hub__games" aria-label="Juegos disponibles">
+        <article class="game-card game-card--soon" data-game="air-hockey">
+          <div class="game-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="3" y="2" width="18" height="20" rx="3" />
+              <path d="M3 12h18" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </div>
+          <div class="game-card__body">
+            <span class="game-card__badge">Próximamente</span>
+            <h2 class="game-card__name">Air Hockey</h2>
+            <p class="game-card__desc">Tiempo real, una mitad de pantalla por jugador.</p>
+          </div>
+        </article>
+
+        <article class="game-card game-card--soon" data-game="beer-pong">
+          <div class="game-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M6 8h12l-1.2 11a2 2 0 0 1-2 1.8H9.2a2 2 0 0 1-2-1.8Z" />
+              <circle cx="12" cy="4" r="2" />
+            </svg>
+          </div>
+          <div class="game-card__body">
+            <span class="game-card__badge">Próximamente</span>
+            <h2 class="game-card__name">Beer Pong</h2>
+            <p class="game-card__desc">Por turnos, tiro con gesto de deslizamiento.</p>
+          </div>
+        </article>
+
+        <article class="game-card game-card--soon" data-game="pong">
+          <div class="game-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <path d="M6 8v4M18 12v4" stroke-linecap="round" stroke-width="2.6" />
+              <circle cx="12" cy="11" r="1.4" fill="currentColor" stroke="none" />
+            </svg>
+          </div>
+          <div class="game-card__body">
+            <span class="game-card__badge">Próximamente</span>
+            <h2 class="game-card__name">Pong</h2>
+            <p class="game-card__desc">El clásico, con palas en los dos extremos.</p>
+          </div>
+        </article>
+
+        <article class="game-card game-card--soon" data-game="battleship">
+          <div class="game-card__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M3 15h18l-2.2 4.2a2 2 0 0 1-1.8 1H7a2 2 0 0 1-1.8-1Z" />
+              <path d="M7 15V9h10v6" />
+              <path d="M12 9V5" stroke-linecap="round" />
+            </svg>
+          </div>
+          <div class="game-card__body">
+            <span class="game-card__badge">Próximamente</span>
+            <h2 class="game-card__name">Hundir la flota</h2>
+            <p class="game-card__desc">Por turnos, pasando el móvil de mano en mano.</p>
+          </div>
+        </article>
+      </nav>
+
+      <p class="hub__notice" id="hub-notice" hidden role="status"></p>
+
+      <footer class="hub__footer">
+        <span>Doubled</span>
+        <span aria-hidden="true">·</span>
+        <span>v<span id="app-version">—</span></span>
+      </footer>
+    </main>
+
+    <script src="./js/shared/version.js"></script>
+    <script src="./js/app.js"></script>
+  </body>
+</html>
