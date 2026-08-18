@@ -22,8 +22,10 @@ turno y turno.
 ## 2. Reglas
 
 - Cada jugador empieza con **10 vasos** en formación triangular (4-3-2-1).
-- Turno = **2 lanzamientos**. Los vasos acertados se retiran al terminar el
-  turno completo.
+- Turno = **2 lanzamientos**. Cada vaso acertado se retira **en el momento**,
+  no al cerrar el turno: si se encesta con el primer tiro, el segundo del
+  mismo turno ya se lanza contra una mesa sin ese vaso, igual que en una mesa
+  de verdad.
 - Si un jugador **acierta los dos** lanzamientos del turno, recupera la pelota y
   tira una vez más (*balls back*, una sola vez por turno).
 - Cuando quedan **6, 3 y 1 vasos**, la formación se **reagrupa** automáticamente
@@ -137,10 +139,12 @@ turno y turno.
   un lateral no queda flotando: entra en caída libre, se apaga conforme baja y
   desaparece. El borde cercano no cuenta como salir —por delante está el suelo
   del jugador, y además el saque arranca justo ahí—.
-- Un vaso ya acertado sigue siendo un **obstáculo sólido** hasta que el turno se
-  cierra y se retira: se dibuja atenuado, estorba como cualquier otro y la
-  pelota rebota en su boca, pero no vuelve a puntuar. Todo lo que se ve en la
-  mesa colisiona.
+- **Sin ninguna ayuda al tirador.** La pelota entra sólo si de verdad cabe por
+  la boca: su contorno completo tiene que quedar dentro del borde dibujado
+  (`distancia ≤ radio de la boca − radio de la pelota`). Nada de radios de
+  acierto mayores que la figura. Entre ese límite y `radio + radio de la
+  pelota` lo que hay es un golpe en el borde, que es contacto real, no
+  tolerancia.
 - **Sin viento ni efecto**: la única variable es el gesto, para que la habilidad
   sea reproducible.
 - Toda la geometría en coordenadas normalizadas, igual que en Air Hockey.

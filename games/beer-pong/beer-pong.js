@@ -187,21 +187,18 @@
   }
 
   /**
-   * Retira los vasos marcados como acertados durante el turno que acaba de
-   * terminar. Se hace de golpe al cerrar el turno (no tiro a tiro): así el
-   * jugador ve durante todo su turno cuáles ya ha tocado (atenuados en
-   * drawScene) sin que la formación cambie a mitad de turno.
+   * Retira un vaso en el momento de encestarlo, no al cerrar el turno: si se
+   * acierta con el primer tiro, el segundo del mismo turno ya se lanza contra
+   * una mesa sin ese vaso, como en una mesa de verdad.
+   *
+   * La reagrupación no se hace aquí sino al terminar el tiro (`finishShot`):
+   * rehacer la formación en pleno vuelo cambiaría los vasos de sitio a mitad
+   * de animación y se llevaría por delante la de retirada.
    */
-  function retirePendingHits(player) {
-    var now = performance.now();
-    player.cups.forEach(function (cup) {
-      if (!cup.pendingHit) return;
-      cup.pendingHit = false;
-      cup.alive = false;
-      cup.removedAt = now;
-      player.cupsRemaining--;
-    });
-    maybeRegroup(player);
+  function retireCup(player, cup) {
+    cup.alive = false;
+    cup.removedAt = performance.now();
+    player.cupsRemaining--;
   }
 
   /* -------------------------------------------------------------- layout */
@@ -286,9 +283,8 @@
    * La clave del caché es la identidad del array `cups` más las dimensiones:
    * al reagrupar (`buildFormation` devuelve un array nuevo), al cambiar de
    * turno (se pasa al array del otro jugador) o al redimensionar, el caché
-   * se invalida solo. Los flags `alive`/`pendingHit` se leen en vivo desde
-   * `pos.cup`, que apunta al mismo objeto, así que no hace falta invalidarlo
-   * al acertar un vaso.
+   * se invalida solo. El flag `alive` se lee en vivo desde `pos.cup`, que
+   * apunta al mismo objeto, así que retirar un vaso no obliga a invalidarlo.
    */
   var cupCache = { cups: null, w: 0, h: 0, positions: null };
 
@@ -353,6 +349,10 @@
     var wasHit = ball.wasHit;
     resetBall();
 
+    // La formación se rehace ahora, con la pelota ya en reposo y la
+    // animación de retirada terminada, no en el instante de encestar.
+    if (wasHit) maybeRegroup(targetPlayer());
+
     shotsThisTurn++;
     if (wasHit) turnHits++;
 
@@ -383,7 +383,7 @@
     var target = targetPlayer(); // a quien atacaba, capturado antes de girar turno
     var wasRedemptionTurn = redemptionActive;
 
-    retirePendingHits(target);
+    // Los vasos ya se retiraron uno a uno, según se encestaban.
     var targetWipedOut = target.cupsRemaining <= 0;
 
     if (wasRedemptionTurn) {
@@ -566,7 +566,7 @@
   }
 
   function sinkBall(pos) {
-    pos.cup.pendingHit = true;
+    retireCup(targetPlayer(), pos.cup);
     ball.wasHit = true;
     ball.sinkCup = pos;
     ball.phase = 'sinking';
@@ -604,14 +604,10 @@
       var cy = prevY + (ball.y - prevY) * f;
       var dist = tableDistance(cx - pos.x, cy - pos.y);
 
-      // Un vaso ya acertado este turno sigue en la mesa hasta que el turno
-      // se cierre: estorba como cualquier otro, pero no se puede volver a
-      // encestar (la bola rebota en su boca como si estuviera tapada).
-      // Radio de acierto algo mayor que la boca dibujada: el plan lo pide
-      // así a propósito, para perdonar la imprecisión del dedo en una
-      // pantalla pequeña. Exigir que la pelota entrase limpia (r menos su
-      // propio radio) dejaba una ventana de apenas medio grado de potencia.
-      if (!pos.cup.pendingHit && dist <= pos.r + ballRadius * 0.25) {
+      // Sin ninguna ayuda al tirador: la pelota entra sólo si de verdad cabe
+      // por la boca, es decir si su contorno completo queda dentro del borde
+      // dibujado. Nada de radios de acierto mayores que la figura.
+      if (dist <= pos.r - ballRadius) {
         ball.x = cx;
         ball.y = cy;
         ball.z = pos.h;
@@ -944,17 +940,13 @@
       var scale = 1;
 
       if (!pos.cup.alive) {
-        // Animación de retirada: encoge y se desvanece durante
-        // CUP_REMOVE_ANIM_MS tras cerrar el turno.
+        // Animación de retirada: encoge y se desvanece nada más encestarlo.
         if (!pos.cup.removedAt) return;
         var elapsed = now - pos.cup.removedAt;
         if (elapsed >= CUP_REMOVE_ANIM_MS) return;
         var t = elapsed / CUP_REMOVE_ANIM_MS;
         alpha = 1 - t;
         scale = 1 - t;
-      } else if (pos.cup.pendingHit) {
-        // Ya tocado este turno, pendiente de retirarse al cerrarlo.
-        alpha = 0.4;
       }
 
       items.push({ depth: pos.y, kind: 'cup', pos: pos, alpha: alpha, scale: scale });

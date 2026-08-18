@@ -3,6 +3,33 @@
 Todas las versiones publicadas de Doubled. Formato `MAJOR.MINOR` según
 [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md).
 
+## [2.4] — Beer Pong: sin ayuda al tirador y retirada inmediata del vaso
+
+### Arreglado
+- **El vaso encestado no se retiraba hasta cerrar el turno**, así que al
+  acertar con el primer tiro el segundo del mismo turno seguía encontrándose
+  el vaso en la mesa (y rebotando contra él). Ahora se retira en el momento
+  de encestarlo. La reagrupación de la formación se hace al terminar el tiro,
+  no en el instante del acierto, para no mover los vasos de sitio en pleno
+  vuelo ni cortar la animación de retirada.
+
+### Cambiado
+- **Fuera la ayuda al tirador.** La pelota entra sólo si de verdad cabe por la
+  boca: su contorno completo debe quedar dentro del borde dibujado
+  (`distancia ≤ radio − radio de la pelota`), en vez del `radio + 25 %` que
+  perdonaba antes. Ninguna zona de acierto es ya más ancha que la figura que
+  se ve.
+
+Consecuencia medida: la ventana para encestar un vaso concreto queda en unos
+100-150 px/s de velocidad de gesto sobre un rango total de 3700, en torno al
+3-4 % por vaso. Es la geometría real, sin margen regalado, y el juego es
+notablemente más exigente que en 2.3.
+
+Validado en Chromium headless contando los vasos dibujados por frame: el
+recuento baja de 10 a 9 durante el propio tiro y el segundo lanzamiento del
+turno ya sale con 9. Repasados turnos, hub, mute, offline y la caída fuera
+de la mesa.
+
 ## [2.3] — Beer Pong: tiro bombeado, sin ayudas de apuntado, caída fuera de mesa
 
 ### Eliminado
